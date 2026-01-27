@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parchment Blog
 
-## Getting Started
+A production-oriented blog platform built with **Next.js, TypeScript, Prisma, and PostgreSQL**.
 
-First, run the development server:
+This repository currently contains the **foundational scaffolding**:
+- Next.js App Router setup
+- PostgreSQL database (via Docker)
+- Prisma ORM (v6) with migrations
+- Health check API route to verify DB connectivity
+- React Query provider wired for future data fetching
 
+Business features (auth, posts, editor, etc.) will be built incrementally on feature branches.
+
+---
+
+## Tech Stack
+
+- **Frontend / App**: Next.js (App Router), React, TypeScript
+- **Data**: PostgreSQL, Prisma ORM
+- **State / Fetching**: TanStack React Query
+- **Validation**: Zod
+- **Infra (local)**: Docker Compose (Postgres)
+
+---
+
+## Getting Started (Local Development)
+
+### 1. Install dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Start PostgreSQL
+```bash
+docker compose up -d
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configure environment
+Create a `.env` file:
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/blog?schema=public"
+NEXTAUTH_SECRET="dev-secret-change-me"
+NEXTAUTH_URL="http://localhost:3000"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Run migrations & generate Prisma client
+```bash
+npx prisma migrate dev
+```
 
-## Learn More
+### 5. Start the dev server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 6. Verify setup
+Visit:
+- `http://localhost:3000`
+- `http://localhost:3000/api/health` → should return `{ ok: true }`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Status
 
-## Deploy on Vercel
+🚧 **In active development**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Current focus:
+- Authentication (credentials-based)
+- User accounts
+- Post creation and management
+- Production-grade API patterns and caching
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Development Workflow
+
+- `main` branch is always stable
+- New work is done on feature branches (e.g. `feat/auth-credentials`)
+- Changes are merged back into `main` via PRs
+
+---
