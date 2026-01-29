@@ -33,7 +33,14 @@ export default function Header() {
               >
                 Dashboard
               </Link>
-
+              {}
+              {user && (
+                <Link href="/dashboard/posts"
+                  className="rounded-md px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                >
+                  My posts
+                </Link>
+              )}
               <button
                 onClick={() => signOut({ callbackUrl: "/" })}
                 className="
