@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+
 import { z } from "zod";
 
 import { prisma } from "@/lib/db";
@@ -15,12 +17,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   const parsed = publishPostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(
-      400,
-      "VALIDATION_ERROR",
-      "Invalid input.",
-      z.treeifyError(parsed.error)
-    );
+    return jsonError(400, "VALIDATION_ERROR", "Invalid input.", z.treeifyError(parsed.error));
   }
 
   // ensure valid ownership
@@ -38,10 +35,14 @@ export async function PATCH(req: Request, ctx: IdCtx) {
     data: { publishedAt },
     select: {
       id: true,
+      slug: true,
       publishedAt: true,
       updatedAt: true,
     },
   });
+
+  revalidateTag("public-posts", "default");
+  revalidateTag(`public-post:${post.slug}`, "default");
 
   return NextResponse.json({ ok: true as const, post });
 }

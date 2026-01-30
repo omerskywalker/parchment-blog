@@ -4,9 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type ApiResponse =
-  | { ok: true }
-  | { ok: false; error: string; issues?: unknown };
+type ApiResponse = { ok: true } | { ok: false; error: string; issues?: unknown };
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,12 +32,10 @@ export default function RegisterPage() {
 
       if (!res.ok || !data.ok) {
         if ("error" in data) {
-          if (data.error === "EMAIL_IN_USE")
-            return setError("That email is already in use.");
+          if (data.error === "EMAIL_IN_USE") return setError("That email is already in use.");
           if (data.error === "INVALID_INPUT")
             return setError("Please check your inputs and try again.");
-          if (data.error === "INVALID_JSON")
-            return setError("Invalid request. Please try again.");
+          if (data.error === "INVALID_JSON") return setError("Invalid request. Please try again.");
           return setError("Could not create account. Try again.");
         }
         return setError("Could not create account. Try again.");
@@ -54,20 +50,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-60px)] px-4 py-10 grid place-items-center">
-      <section
-        className="
-          w-full max-w-md rounded-2xl border p-6 shadow-sm
-          bg-[rgb(var(--card))] text-[rgb(var(--card-foreground))]
-          border-[rgb(var(--border))]
-        "
-      >
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Create account
-        </h1>
-        <p className="mt-1 text-sm text-[rgb(var(--muted))]">
-          Register to start posting.
-        </p>
+    <main className="grid min-h-[calc(100vh-60px)] place-items-center px-4 py-10">
+      <section className="w-full max-w-md rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] p-6 text-[rgb(var(--card-foreground))] shadow-sm">
+        <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
+        <p className="mt-1 text-sm text-[rgb(var(--muted))]">Register to start posting.</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
@@ -76,11 +62,7 @@ export default function RegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
-              className="
-                mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm
-                bg-transparent border-[rgb(var(--border))]
-                focus:outline-none focus:ring-2 focus:ring-black/20
-              "
+              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
             />
           </div>
 
@@ -92,11 +74,7 @@ export default function RegisterPage() {
               autoComplete="email"
               type="email"
               required
-              className="
-                mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm
-                bg-transparent border-[rgb(var(--border))]
-                focus:outline-none focus:ring-2 focus:ring-black/20
-              "
+              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
             />
           </div>
 
@@ -108,15 +86,9 @@ export default function RegisterPage() {
               autoComplete="new-password"
               type="password"
               required
-              className="
-                mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm
-                bg-transparent border-[rgb(var(--border))]
-                focus:outline-none focus:ring-2 focus:ring-black/20
-              "
+              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
             />
-            <p className="mt-1 text-xs text-[rgb(var(--muted))]">
-              Minimum 10 characters.
-            </p>
+            <p className="mt-1 text-xs text-[rgb(var(--muted))]">Minimum 10 characters.</p>
           </div>
 
           {error && (
@@ -127,10 +99,7 @@ export default function RegisterPage() {
 
           <button
             disabled={loading}
-            className="
-              w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white
-              hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60
-            "
+            className="w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Creating..." : "Create account"}
           </button>
@@ -139,7 +108,7 @@ export default function RegisterPage() {
             Already have an account?{" "}
             <Link
               href="/signin"
-              className="font-medium underline underline-offset-4 hover:opacity-90 text-[rgb(var(--card-foreground))]"
+              className="font-medium text-[rgb(var(--card-foreground))] underline underline-offset-4 hover:opacity-90"
             >
               Sign in
             </Link>

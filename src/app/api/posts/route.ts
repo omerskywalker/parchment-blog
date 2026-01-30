@@ -2,20 +2,12 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
-import { z } from 'zod';
+import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { createPostSchema, slugify } from "@/lib/validators/posts";
 
-function jsonError(
-  status: number,
-  error: string,
-  message?: string,
-  issues?: unknown
-) {
-  return NextResponse.json(
-    { ok: false as const, error, message, issues },
-    { status }
-  );
+function jsonError(status: number, error: string, message?: string, issues?: unknown) {
+  return NextResponse.json({ ok: false as const, error, message, issues }, { status });
 }
 
 export async function POST(req: Request) {
@@ -87,10 +79,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true as const, post }, { status: 201 });
     } catch (err) {
       // unique constraint collision
-      if (
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        err.code === "P2002"
-      ) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         // if it's NOT a slug collision, then bubble up
         const target = (err.meta?.target as string[] | undefined) ?? [];
         if (!target.includes("slug")) {
@@ -109,6 +98,6 @@ export async function POST(req: Request) {
   return jsonError(
     409,
     "SLUG_TAKEN",
-    "Could not generate a unique slug. Try a different title or custom slug."
+    "Could not generate a unique slug. Try a different title or custom slug.",
   );
 }

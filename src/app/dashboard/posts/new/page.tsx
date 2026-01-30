@@ -56,8 +56,7 @@ export default function NewPostPage() {
 
     // lightweight client-side guardrails (server will still validate)
     if (!form.title.trim()) return setFormError("Title is required.");
-    if (form.contentMd.trim().length < 1)
-      return setFormError("Content cannot be empty.");
+    if (form.contentMd.trim().length < 1) return setFormError("Content cannot be empty.");
 
     mutation.mutate({
       title: form.title.trim(),
@@ -80,12 +79,8 @@ export default function NewPostPage() {
 
       {/* page header */}
       <div className="mt-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">
-          New post
-        </h1>
-        <p className="mt-1 text-sm text-white/60">
-          Create a draft. You can publish later.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">New post</h1>
+        <p className="mt-1 text-sm text-white/60">Create a draft. You can publish later.</p>
       </div>
 
       {/* form card */}

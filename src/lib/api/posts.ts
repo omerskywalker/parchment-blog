@@ -82,10 +82,7 @@ export type UpdatePostResponse =
     }
   | { ok: false; error: string; message?: string };
 
-export async function updatePost(
-  id: string,
-  input: UpdatePostInput
-): Promise<UpdatePostResponse> {
+export async function updatePost(id: string, input: UpdatePostInput): Promise<UpdatePostResponse> {
   const res = await fetch(`/api/posts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -94,9 +91,7 @@ export async function updatePost(
   return res.json();
 }
 
-export type DeletePostResponse =
-  | { ok: true }
-  | { ok: false; error: string; message?: string };
+export type DeletePostResponse = { ok: true } | { ok: false; error: string; message?: string };
 
 export async function deletePost(id: string): Promise<DeletePostResponse> {
   const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
@@ -109,7 +104,7 @@ export type PublishPostResponse =
 
 export async function setPostPublished(
   id: string,
-  published: boolean
+  published: boolean,
 ): Promise<PublishPostResponse> {
   const res = await fetch(`/api/posts/${id}/publish`, {
     method: "PATCH",
