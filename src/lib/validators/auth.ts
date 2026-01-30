@@ -8,14 +8,8 @@ export const RegisterSchema = z.object({
     .max(60)
     .optional()
     .or(z.literal("").transform(() => undefined)),
-  email: z
-    .email()
-    .trim()
-    .max(255),
-  password: z
-    .string()
-    .min(10)
-    .max(200),
+  email: z.email().trim().max(255),
+  password: z.string().min(10).max(200),
 });
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;

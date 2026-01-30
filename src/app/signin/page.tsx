@@ -37,14 +37,8 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-60px)] px-4 py-10 grid place-items-center">
-      <section
-        className="
-          w-full max-w-md rounded-2xl border p-6 shadow-sm
-          bg-[rgb(var(--card))] text-[rgb(var(--card-foreground))]
-          border-[rgb(var(--border))]
-        "
-      >
+    <main className="grid min-h-[calc(100vh-60px)] place-items-center px-4 py-10">
+      <section className="w-full max-w-md rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] p-6 text-[rgb(var(--card-foreground))] shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-1 text-sm text-[rgb(var(--muted))]">Welcome back.</p>
 
@@ -57,11 +51,7 @@ export default function SignInPage() {
               autoComplete="email"
               type="email"
               required
-              className="
-                mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm
-                bg-transparent border-[rgb(var(--border))]
-                focus:outline-none focus:ring-2 focus:ring-black/20
-              "
+              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
             />
           </div>
 
@@ -73,11 +63,7 @@ export default function SignInPage() {
               autoComplete="current-password"
               type="password"
               required
-              className="
-                mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm
-                bg-transparent border-[rgb(var(--border))]
-                focus:outline-none focus:ring-2 focus:ring-black/20
-              "
+              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
             />
           </div>
 
@@ -89,10 +75,7 @@ export default function SignInPage() {
 
           <button
             disabled={loading}
-            className="
-              w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white
-              hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60
-            "
+            className="w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
@@ -101,7 +84,7 @@ export default function SignInPage() {
             New here?{" "}
             <Link
               href="/register"
-              className="font-medium underline underline-offset-4 hover:opacity-90 text-[rgb(var(--card-foreground))]"
+              className="font-medium text-[rgb(var(--card-foreground))] underline underline-offset-4 hover:opacity-90"
             >
               Create an account
             </Link>

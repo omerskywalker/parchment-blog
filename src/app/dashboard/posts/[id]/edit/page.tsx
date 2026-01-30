@@ -17,9 +17,79 @@ export default function EditPostPage() {
   const router = useRouter();
   const qc = useQueryClient();
 
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id?: string }>();
+  const id = params?.id;
 
-  // if id is missing, bail early
+  // ✅ Hooks must be declared before any conditional returns
+  const [title, setTitle] = React.useState("");
+  const [slug, setSlug] = React.useState("");
+  const [contentMd, setContentMd] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+
+  const postQuery = useQuery({
+    queryKey: id ? qk.post(id) : ["post", "missing-id"],
+    queryFn: () => fetchPost(id as string),
+    enabled: typeof id === "string" && id.length > 0,
+    retry: false,
+  });
+
+  React.useEffect(() => {
+    if (postQuery.data?.ok) {
+      setTitle(postQuery.data.post.title);
+      setSlug(postQuery.data.post.slug);
+      setContentMd(postQuery.data.post.contentMd);
+    }
+  }, [postQuery.data]);
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      updatePost(id as string, {
+        title: title.trim(),
+        slug: slug.trim(),
+        contentMd,
+      }),
+    onSuccess: async (res) => {
+      if (!res.ok) return setError(res.message ?? "Unable to save.");
+
+      await qc.invalidateQueries({ queryKey: qk.myPosts() });
+      await qc.invalidateQueries({ queryKey: qk.post(id as string) });
+
+      setError(null);
+      router.push("/dashboard/posts");
+      router.refresh();
+    },
+    onError: () => setError("Something went wrong."),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePost(id as string),
+    onSuccess: async (res) => {
+      if (!res.ok) return setError(res.message ?? "Unable to delete.");
+
+      await qc.invalidateQueries({ queryKey: qk.myPosts() });
+
+      router.push("/dashboard/posts");
+      router.refresh();
+    },
+    onError: () => setError("Something went wrong."),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: (published: boolean) => setPostPublished(id as string, published),
+    onSuccess: async (res) => {
+      if (!res.ok)
+        return setError(res.message ?? "Unable to update publish state.");
+
+      await qc.invalidateQueries({ queryKey: qk.myPosts() });
+      await qc.invalidateQueries({ queryKey: qk.post(id as string) });
+
+      setError(null);
+      router.push("/dashboard/posts");
+      router.refresh();
+    },
+    onError: () => setError("Something went wrong."),
+  });
+
   if (!id) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-10">
@@ -36,76 +106,7 @@ export default function EditPostPage() {
     );
   }
 
-  const { data, isPending } = useQuery({
-    queryKey: qk.post(id),
-    queryFn: () => fetchPost(id),
-    retry: false,
-    enabled: true,
-  });
-
-  const [title, setTitle] = React.useState("");
-  const [slug, setSlug] = React.useState("");
-  const [contentMd, setContentMd] = React.useState("");
-  const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (data?.ok) {
-      setTitle(data.post.title);
-      setSlug(data.post.slug);
-      setContentMd(data.post.contentMd);
-    }
-  }, [data]);
-
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      updatePost(id, {
-        title: title.trim(),
-        slug: slug.trim(),
-        contentMd,
-      }),
-    onSuccess: async (res) => {
-      if (!res.ok) return setError(res.message ?? "Unable to save.");
-
-      await qc.invalidateQueries({ queryKey: qk.myPosts() });
-      await qc.invalidateQueries({ queryKey: qk.post(id) });
-
-      setError(null);
-
-      router.push("/dashboard/posts");
-      router.refresh();
-    },
-    onError: () => setError("Something went wrong."),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => deletePost(id),
-    onSuccess: async (res) => {
-      if (!res.ok) return setError(res.message ?? "Unable to delete.");
-
-      await qc.invalidateQueries({ queryKey: qk.myPosts() });
-
-      router.push("/dashboard/posts");
-      router.refresh();
-    },
-    onError: () => setError("Something went wrong."),
-  });
-
-  const publishMutation = useMutation({
-    mutationFn: (published: boolean) => setPostPublished(id, published),
-    onSuccess: async (res) => {
-      if (!res.ok)
-        return setError(res.message ?? "Unable to update publish state.");
-
-        await qc.invalidateQueries({ queryKey: qk.myPosts() });
-        await qc.invalidateQueries({ queryKey: qk.post(id) });
-
-        setError(null);
-
-        router.push("/dashboard/posts");
-        router.refresh();
-        },
-        onError: () => setError("Something went wrong."),
-    });
+  const { data, isPending } = postQuery;
 
   if (isPending) {
     return (
@@ -158,25 +159,27 @@ export default function EditPostPage() {
 
       <div className="mt-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Edit post</h1>
-            {isPublished && data.post.publishedAt ? (
-                <p className="mt-1 text-xs text-white/50">
-                    Published {new Date(data.post.publishedAt).toLocaleString()}
-                </p>
-                ) : null}
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            Edit post
+          </h1>
 
-            <span
-                className={[
-                "rounded-full px-2.5 py-1 text-xs",
-                isPublished
-                    ? "bg-emerald-500/15 text-emerald-200"
-                    : "bg-white/10 text-white/70",
-                ].join(" ")}
-            >
-                {isPublished ? "Published" : "Draft"}
-            </span>
+          <span
+            className={[
+              "rounded-full px-2.5 py-1 text-xs",
+              isPublished
+                ? "bg-emerald-500/15 text-emerald-200"
+                : "bg-white/10 text-white/70",
+            ].join(" ")}
+          >
+            {isPublished ? "Published" : "Draft"}
+          </span>
+
+          {isPublished && data.post.publishedAt ? (
+            <p className="text-xs text-white/50">
+              Published {new Date(data.post.publishedAt).toLocaleString()}
+            </p>
+          ) : null}
         </div>
-
 
         <button
           onClick={() => {
@@ -189,8 +192,8 @@ export default function EditPostPage() {
           {publishMutation.isPending
             ? "Updating…"
             : isPublished
-            ? "Unpublish"
-            : "Publish"}
+              ? "Unpublish"
+              : "Publish"}
         </button>
       </div>
 

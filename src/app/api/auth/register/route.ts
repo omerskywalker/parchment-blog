@@ -39,10 +39,7 @@ export async function POST(req: Request) {
     return jsonOk({}, 201);
   } catch (err) {
     // prisma unique constraint violation
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return jsonError("EMAIL_IN_USE", 409);
     }
 

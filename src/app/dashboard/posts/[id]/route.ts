@@ -7,16 +7,8 @@ import { updatePostSchema } from "@/lib/validators/posts";
 
 import { getAuthedUserId } from "@/lib/server/auth";
 
-function jsonError(
-  status: number,
-  error: string,
-  message?: string,
-  issues?: unknown
-) {
-  return NextResponse.json(
-    { ok: false as const, error, message, issues },
-    { status }
-  );
+function jsonError(status: number, error: string, message?: string, issues?: unknown) {
+  return NextResponse.json({ ok: false as const, error, message, issues }, { status });
 }
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -55,12 +47,7 @@ export async function PATCH(_req: Request, ctx: Ctx) {
   const parsed = updatePostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(
-      400,
-      "VALIDATION_ERROR",
-      "Invalid input.",
-      z.treeifyError(parsed.error)
-    );
+    return jsonError(400, "VALIDATION_ERROR", "Invalid input.", z.treeifyError(parsed.error));
   }
 
   // ensure valid ownership
@@ -87,10 +74,7 @@ export async function PATCH(_req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: true as const, post });
   } catch (err) {
     // if the slug is colliding, Prisma throws P2002
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const target = (err.meta?.target as string[] | undefined) ?? [];
       if (target.includes("slug")) {
         return jsonError(409, "SLUG_TAKEN", "That slug is already in use.");

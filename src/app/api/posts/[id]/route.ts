@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
@@ -9,7 +10,7 @@ import { requireUserAndPostId, type IdCtx, jsonError } from "@/lib/server/route-
 export async function GET(_req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
   if (!auth.ok) return auth.res;
-  
+
   const { userId, id } = auth;
 
   const post = await prisma.post.findFirst({
@@ -33,19 +34,14 @@ export async function GET(_req: Request, ctx: IdCtx) {
 export async function PATCH(req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
   if (!auth.ok) return auth.res;
-  
+
   const { userId, id } = auth;
 
   const body = await req.json().catch(() => null);
   const parsed = updatePostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(
-      400,
-      "VALIDATION_ERROR",
-      "Invalid input.",
-      z.treeifyError(parsed.error)
-    );
+    return jsonError(400, "VALIDATION_ERROR", "Invalid input.", z.treeifyError(parsed.error));
   }
 
   // ensure valid ownership
@@ -69,13 +65,15 @@ export async function PATCH(req: Request, ctx: IdCtx) {
       },
     });
 
+    if (post.publishedAt) {
+      revalidateTag("public-posts", "default");
+      revalidateTag(`public-post:${post.slug}`, "default");
+    }
+
     return NextResponse.json({ ok: true as const, post });
   } catch (err) {
     // if the slug is colliding, Prisma throws P2002
-    if (
-      err instanceof Prisma.PrismaClientKnownRequestError &&
-      err.code === "P2002"
-    ) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       const target = (err.meta?.target as string[] | undefined) ?? [];
       if (target.includes("slug")) {
         return jsonError(409, "SLUG_TAKEN", "That slug is already in use.");
@@ -96,11 +94,16 @@ export async function DELETE(_req: Request, ctx: IdCtx) {
 
   const existing = await prisma.post.findFirst({
     where: { id, authorId: userId },
-    select: { id: true },
+    select: { id: true, slug: true, publishedAt: true },
   });
   if (!existing) return jsonError(404, "NOT_FOUND", "Post not found.");
 
   await prisma.post.delete({ where: { id } });
+
+  if (existing.publishedAt) {
+    revalidateTag("public-posts", "default");
+    revalidateTag(`public-post:${existing.slug}`, "default");
+  }
 
   return NextResponse.json({ ok: true as const });
 }
