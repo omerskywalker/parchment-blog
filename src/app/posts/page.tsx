@@ -1,8 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getPublicPosts } from "@/lib/server/public-posts";
 
-export const dynamic = "force-static";
-export const revalidate = 60;
+export const metadata: Metadata = {
+  title: "Posts",
+  alternates: { canonical: "/posts" },
+};
 
 export default async function PublicPostsPage() {
   const posts = await getPublicPosts();
@@ -12,7 +15,7 @@ export default async function PublicPostsPage() {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">Posts</h1>
-          <p className="mt-1 text-sm text-white/60">Published writing from the community.</p>
+          <p className="mt-1 text-sm text-white/50">Published writing from the community.</p>
         </div>
 
         <Link
@@ -27,7 +30,7 @@ export default async function PublicPostsPage() {
         {posts.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
             <p className="text-white/80">No published posts yet.</p>
-            <p className="mt-1 text-sm text-white/60">
+            <p className="mt-1 text-sm text-white/50">
               Publish something from your dashboard to see it here.
             </p>
           </div>
@@ -41,10 +44,14 @@ export default async function PublicPostsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-medium text-white">{p.title}</h2>
-                  <p className="mt-1 text-sm text-white/60">
+                  <p className="mt-1 text-sm text-white/50">
                     {p.author?.name ?? "Anonymous"}
                     {" · "}
-                    {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : "Unpublished"}
+                    {p.publishedAt ? new Intl.DateTimeFormat("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    }).format(new Date(p.publishedAt)) : "Unpublished"}
                   </p>
                 </div>
 
@@ -53,7 +60,7 @@ export default async function PublicPostsPage() {
                 </span>
               </div>
 
-              <p className="mt-3 text-sm text-white/60">/posts/{p.slug}</p>
+              <p className="mt-3 text-sm text-white/50">/posts/{p.slug}</p>
             </Link>
           ))
         )}

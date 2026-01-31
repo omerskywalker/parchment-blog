@@ -47,7 +47,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   // ensure valid ownership
   const existing = await prisma.post.findFirst({
     where: { id, authorId: userId },
-    select: { id: true },
+    select: { id: true, slug: true, publishedAt: true },
   });
   if (!existing) return jsonError(404, "NOT_FOUND", "Post not found.");
 
@@ -65,10 +65,17 @@ export async function PATCH(req: Request, ctx: IdCtx) {
       },
     });
 
-    if (post.publishedAt) {
+    // revalidate public caches if the post *was* public OR *is now* public OR the slug changed
+    const wasPublic = Boolean(existing.publishedAt);
+    const isPublic = Boolean(post.publishedAt);
+    const slugChanged = existing.slug !== post.slug;
+
+    if (wasPublic || isPublic || slugChanged) {
       revalidateTag("public-posts", "default");
+      revalidateTag(`public-post:${existing.slug}`, "default");
       revalidateTag(`public-post:${post.slug}`, "default");
     }
+
 
     return NextResponse.json({ ok: true as const, post });
   } catch (err) {

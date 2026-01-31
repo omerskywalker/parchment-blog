@@ -176,7 +176,11 @@ export default function EditPostPage() {
 
           {isPublished && data.post.publishedAt ? (
             <p className="text-xs text-white/50">
-              Published {new Date(data.post.publishedAt).toLocaleString()}
+              Published {new Intl.DateTimeFormat("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+            }).format(new Date(data.post.publishedAt))}
             </p>
           ) : null}
         </div>
