@@ -41,8 +41,8 @@ export async function PATCH(req: Request, ctx: IdCtx) {
     },
   });
 
-  revalidateTag("public-posts", "default");
-  revalidateTag(`public-post:${post.slug}`, "default");
+    revalidateTag("public-posts", "default");
+    revalidateTag(`public-post:${post.slug}`, "default");
 
   return NextResponse.json({ ok: true as const, post });
 }

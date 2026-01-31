@@ -42,7 +42,7 @@ export default function MyPostsPage() {
         ) : data.posts.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-black/40 p-6">
             <p className="text-white/80">No posts yet.</p>
-            <p className="mt-1 text-sm text-white/60">Create your first draft to get started.</p>
+            <p className="mt-1 text-sm text-white/50">Create your first draft to get started.</p>
           </div>
         ) : (
           <ul className="space-y-3">
@@ -53,7 +53,7 @@ export default function MyPostsPage() {
                     {/* left: title + slug */}
                     <div>
                       <p className="text-base font-medium text-white">{p.title}</p>
-                      <p className="mt-1 text-sm text-white/60">/posts/{p.slug}</p>
+                      <p className="mt-1 text-sm text-white/50">/posts/{p.slug}</p>
                     </div>
 
                     {/* right: status + actions */}
