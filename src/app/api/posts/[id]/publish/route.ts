@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { publishPostSchema } from "@/lib/validators/posts";
 import { requireUserAndPostId, type IdCtx, jsonError } from "@/lib/server/route-helpers";
+import { ERROR_CODES } from "@/lib/server/error-codes";
 
 export async function PATCH(req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
@@ -17,7 +18,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   const parsed = publishPostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, "VALIDATION_ERROR", "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
   }
 
   // ensure valid ownership
@@ -26,7 +27,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
     select: { id: true },
   });
 
-  if (!existing) return jsonError(404, "NOT_FOUND", "Post not found.");
+  if (!existing) return jsonError(404, ERROR_CODES.NOT_FOUND, "Post not found.");
 
   const publishedAt = parsed.data.published ? new Date() : null;
 
