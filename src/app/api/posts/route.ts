@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { createPostSchema, slugify } from "@/lib/validators/posts";
+import { ERROR_CODES } from "@/lib/server/error-codes";
+
 
 function jsonError(status: number, error: string, message?: string, issues?: unknown) {
   return NextResponse.json({ ok: false as const, error, message, issues }, { status });
@@ -16,7 +18,7 @@ export async function POST(req: Request) {
   const email = session?.user?.email;
 
   if (!email) {
-    return jsonError(401, "UNAUTHORIZED", "You must be signed in.");
+    return jsonError(401, ERROR_CODES.UNAUTHORIZED, "You must be signed in.");
   }
 
   // 2) parse + validate payload
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
   const parsed = createPostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, "VALIDATION_ERROR", "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
   }
 
   const { title, contentMd, slug: providedSlug } = parsed.data;
@@ -33,7 +35,7 @@ export async function POST(req: Request) {
   const baseSlug = providedSlug ?? slugify(title);
 
   if (!baseSlug) {
-    return jsonError(400, "VALIDATION_ERROR", "Unable to generate slug from title.");
+    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Unable to generate slug from title.");
   }
 
   // 4) find the user (author) by session email
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
 
   if (!user) {
     // this can happen if DB was reset but cookie still exists
-    return jsonError(401, "UNAUTHORIZED", "Account not found. Please sign in again.");
+    return jsonError(401, ERROR_CODES.UNAUTHORIZED, "Account not found. Please sign in again.");
   }
 
   // 5) create the post as a draft (publishedAt null)
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
         // if it's NOT a slug collision, then bubble up
         const target = (err.meta?.target as string[] | undefined) ?? [];
         if (!target.includes("slug")) {
-          return jsonError(409, "CONFLICT", "Conflict creating post.");
+          return jsonError(409, ERROR_CODES.CONFLICT, "Conflict creating post.");
         }
 
         // else: keep looping to try the next slug
@@ -91,13 +93,13 @@ export async function POST(req: Request) {
       }
 
       console.error("POST /api/posts error:", err);
-      return jsonError(500, "INTERNAL_ERROR", "Something went wrong.");
+      return jsonError(500, ERROR_CODES.INTERNAL_ERROR, "Something went wrong.");
     }
   }
 
   return jsonError(
     409,
-    "SLUG_TAKEN",
+    ERROR_CODES.SLUG_TAKEN,
     "Could not generate a unique slug. Try a different title or custom slug.",
   );
 }
