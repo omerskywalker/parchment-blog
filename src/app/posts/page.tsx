@@ -17,13 +17,6 @@ export default async function PublicPostsPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-white">Posts</h1>
           <p className="mt-1 text-sm text-white/50">Published writing from the community.</p>
         </div>
-
-        <Link
-          href="/"
-          className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
-        >
-          Home
-        </Link>
       </div>
 
       <div className="mt-8 space-y-3">
@@ -39,7 +32,8 @@ export default async function PublicPostsPage() {
             <Link
               key={p.id}
               href={`/posts/${p.slug}`}
-              className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-colors hover:bg-black/50"
+              className="block rounded-2xl border border-white/10 bg-black/40 p-5
+              transition-all hover:bg-black/50 hover:-translate-y-[2px] hover:border-green-900"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { RegisterSchema } from "@/lib/validators/auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { Prisma } from "@prisma/client";
+import { ERROR_CODES } from "@/lib/server/error-codes";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -10,12 +11,12 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return jsonError("INVALID_JSON", 400);
+    return jsonError(ERROR_CODES.INVALID_JSON, 400);
   }
 
   const parsed = RegisterSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError("INVALID_INPUT", 400, {
+    return jsonError(ERROR_CODES.VALIDATION_ERROR, 400, {
       issues: parsed.error.issues,
     });
   }
@@ -44,6 +45,6 @@ export async function POST(req: Request) {
     }
 
     console.error(err);
-    return jsonError("INTERNAL_ERROR", 500);
+    return jsonError(ERROR_CODES.INTERNAL_ERROR, 500);
   }
 }
