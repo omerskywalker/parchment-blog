@@ -7,6 +7,7 @@ export const ERROR_CODES = {
     CONFLICT: "CONFLICT",
     SLUG_TAKEN: "SLUG_TAKEN",
     INTERNAL_ERROR: "INTERNAL_ERROR",
+    INVALID_JSON: "INVALID_JSON,"
   } as const;
   
   export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];

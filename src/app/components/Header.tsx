@@ -31,10 +31,6 @@ export default function Header() {
                 Dashboard
               </Link>
 
-              <Link href="/dashboard/posts" className={navLink}>
-                My posts
-              </Link>
-
               <button onClick={() => signOut({ callbackUrl: "/" })} className={navLink}>
                 Sign out
               </button>

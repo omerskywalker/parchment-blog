@@ -1,16 +1,46 @@
-import Header from "@/app/components/Header";
-import "./globals.css";
-import Providers from "./providers";
+import Link from "next/link";
+import { getPublicPosts } from "@/lib/server/public-posts";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function HomePage() {
+  const posts = await getPublicPosts();
+
   return (
-    <html lang="en">
-      <body>
-        <Providers>
-          <Header />
-          {children}
-        </Providers>
-      </body>
-    </html>
+    <main className="mx-auto max-w-3xl px-4 py-10">
+      <h1 className="text-3xl font-semibold tracking-tight text-white">
+        Parchment
+      </h1>
+      <p className="mt-2 text-sm text-white/60">
+        A minimal, cached public blog + dashboard authoring.
+      </p>
+
+      {posts.length > 0 && (
+        <section className="mt-10">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-medium text-white">Latest posts</h2>
+            <Link
+              href="/posts"
+              className="text-sm text-white/60 hover:text-white"
+            >
+              View all →
+            </Link>
+          </div>
+
+          <div className="space-y-3">
+            {posts.slice(0, 3).map((p) => (
+              <Link
+                key={p.id}
+                href={`/posts/${p.slug}`}
+                className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:bg-black/50"
+              >
+                <h3 className="text-base font-medium text-white">{p.title}</h3>
+                <p className="mt-1 text-sm text-white/50">
+                  {p.author?.name ?? "Anonymous"}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+    </main>
   );
 }
