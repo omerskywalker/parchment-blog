@@ -9,6 +9,8 @@ export default function MyPostsPage() {
   const { data, isPending, isError } = useQuery({
     queryKey: qk.myPosts(),
     queryFn: fetchMyPosts,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
     retry: false,
   });
 
@@ -46,14 +48,16 @@ export default function MyPostsPage() {
           </div>
         ) : (
           <ul className="space-y-3">
-            {data.posts.map((p) => {
+            {data.posts.map((post) => {
               return (
-                <li key={p.id} className="rounded-xl border border-white/10 bg-black/40 p-4">
+                <Link key={post.id + post.publishedAt} href={`/dashboard/posts/${post.id}/edit`} className="block rounded-2xl border border-white/10 bg-black/40 p-5
+                transition-all hover:bg-black/50 hover:border-white">
+                <li key={post.id} className="">
                   <div className="flex items-start justify-between gap-4">
                     {/* left: title + slug */}
                     <div>
-                      <p className="text-base font-medium text-white">{p.title}</p>
-                      <p className="mt-1 text-sm text-white/50">/posts/{p.slug}</p>
+                      <p className="text-base font-medium text-white">{post.title}</p>
+                      <p className="mt-1 text-sm text-white/50">/posts/{post.slug}</p>
                     </div>
 
                     {/* right: status + actions */}
@@ -61,16 +65,16 @@ export default function MyPostsPage() {
                       <span
                         className={[
                           "shrink-0 rounded-full px-2.5 py-1 text-xs",
-                          p.publishedAt
+                          post.publishedAt
                             ? "bg-emerald-500/15 text-emerald-200"
                             : "bg-white/10 text-white/70",
                         ].join(" ")}
                       >
-                        {p.publishedAt ? "Published" : "Draft"}
+                        {post.publishedAt ? "Published" : "Draft"}
                       </span>
 
                       <Link
-                        href={`/dashboard/posts/${p.id}/edit`}
+                        href={`/dashboard/posts/${post.id}/edit`}
                         className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
                       >
                         Edit
@@ -78,6 +82,7 @@ export default function MyPostsPage() {
                     </div>
                   </div>
                 </li>
+                </Link>
               );
             })}
           </ul>

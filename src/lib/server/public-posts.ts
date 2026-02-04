@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
+import { estimateReadingTimeMinutes } from "@/lib/server/reading-time";
 
 export type PublicPostCard = {
   id: string;
@@ -8,6 +9,7 @@ export type PublicPostCard = {
   publishedAt: Date | null;
   updatedAt: Date;
   author: { name: string | null };
+  readingTimeMin: number;
 };
 
 export type PublicPostDetail = {
@@ -18,12 +20,13 @@ export type PublicPostDetail = {
   publishedAt: Date | null;
   updatedAt: Date;
   author: { name: string | null };
+  readingTimeMin: number;
 };
 
 // public feed (published posts only)
 export const getPublicPosts = unstable_cache(
   async (): Promise<PublicPostCard[]> => {
-    return prisma.post.findMany({
+    const rows = await prisma.post.findMany({
       where: { publishedAt: { not: null } },
       orderBy: [{ publishedAt: "desc" }],
       take: 50,
@@ -33,13 +36,18 @@ export const getPublicPosts = unstable_cache(
         slug: true,
         publishedAt: true,
         updatedAt: true,
+        contentMd: true, // required to compute reading time
         author: { select: { name: true } },
       },
     });
+
+    return rows.map(({ contentMd, ...p }) => ({
+      ...p,
+      readingTimeMin: estimateReadingTimeMinutes(contentMd),
+    }));
   },
   ["public-posts"],
   {
-    // cache for 1 minute
     revalidate: 60,
     tags: ["public-posts"],
   },
@@ -49,7 +57,7 @@ export const getPublicPosts = unstable_cache(
 export function getPublicPostBySlug(slug: string) {
   return unstable_cache(
     async (): Promise<PublicPostDetail | null> => {
-      return prisma.post.findFirst({
+      const post = await prisma.post.findFirst({
         where: { slug, publishedAt: { not: null } },
         select: {
           id: true,
@@ -61,6 +69,13 @@ export function getPublicPostBySlug(slug: string) {
           author: { select: { name: true } },
         },
       });
+
+      if (!post) return null;
+
+      return {
+        ...post,
+        readingTimeMin: estimateReadingTimeMinutes(post.contentMd),
+      };
     },
     ["public-post", slug],
     {

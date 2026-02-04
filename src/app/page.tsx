@@ -30,7 +30,7 @@ export default async function HomePage() {
               <Link
                 key={p.id}
                 href={`/posts/${p.slug}`}
-                className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:bg-black/50"
+                className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:bg-black/50 hover:border-white"
               >
                 <h3 className="text-base font-medium text-white">{p.title}</h3>
                 <p className="mt-1 text-sm text-white/50">

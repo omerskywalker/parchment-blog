@@ -20,21 +20,23 @@ export default function EditPostPage() {
   const params = useParams<{ id?: string }>();
   const id = params?.id;
 
-  // ✅ Hooks must be declared before any conditional returns
+  // hooks must be declared before any conditional returns -- TOP LEVEL
   const [title, setTitle] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [contentMd, setContentMd] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
   const postQuery = useQuery({
-    queryKey: id ? qk.post(id) : ["post", "missing-id"],
+    queryKey: qk.post(id ?? ""),
     queryFn: () => fetchPost(id as string),
     enabled: typeof id === "string" && id.length > 0,
     retry: false,
   });
 
+  const didInit = React.useRef(false);
+
   React.useEffect(() => {
-    if (postQuery.data?.ok) {
+    if (!didInit.current && postQuery.data?.ok) {
       setTitle(postQuery.data.post.title);
       setSlug(postQuery.data.post.slug);
       setContentMd(postQuery.data.post.contentMd);
@@ -56,7 +58,6 @@ export default function EditPostPage() {
 
       setError(null);
       router.push("/dashboard/posts");
-      router.refresh();
     },
     onError: () => setError("Something went wrong."),
   });
@@ -69,7 +70,6 @@ export default function EditPostPage() {
       await qc.invalidateQueries({ queryKey: qk.myPosts() });
 
       router.push("/dashboard/posts");
-      router.refresh();
     },
     onError: () => setError("Something went wrong."),
   });
@@ -85,7 +85,6 @@ export default function EditPostPage() {
 
       setError(null);
       router.push("/dashboard/posts");
-      router.refresh();
     },
     onError: () => setError("Something went wrong."),
   });
@@ -141,7 +140,7 @@ export default function EditPostPage() {
           href="/dashboard/posts"
           className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
         >
-          ← Back to Posts
+          ← Back to posts
         </Link>
 
         <button
@@ -190,7 +189,7 @@ export default function EditPostPage() {
             setError(null);
             publishMutation.mutate(!isPublished);
           }}
-          disabled={publishMutation.isPending}
+          disabled={publishMutation.isPending || saveMutation.isPending}
           className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
         >
           {publishMutation.isPending
@@ -249,7 +248,7 @@ export default function EditPostPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || publishMutation.isPending}
               className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
             >
               {saveMutation.isPending ? "Saving…" : "Save & exit"}
