@@ -39,7 +39,6 @@ export default function NewPostPage() {
 
       // redirect back to list
       router.push("/dashboard/posts");
-      router.refresh();
     },
     onError: () => {
       setFormError("Something went wrong. Please try again.");
@@ -73,7 +72,7 @@ export default function NewPostPage() {
           href="/dashboard/posts"
           className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
         >
-          ← Back to Posts
+          ← Back to posts
         </Link>
       </div>
 

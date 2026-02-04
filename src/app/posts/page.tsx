@@ -28,25 +28,26 @@ export default async function PublicPostsPage() {
             </p>
           </div>
         ) : (
-          posts.map((p) => (
+          posts.map((post) => (
             <Link
-              key={p.id}
-              href={`/posts/${p.slug}`}
+              key={post.id}
+              href={`/posts/${post.slug}`}
               className="block rounded-2xl border border-white/10 bg-black/40 p-5
-              transition-all hover:bg-black/50 hover:-translate-y-[2px] hover:border-green-900"
+              transition-all hover:bg-black/50 hover:-translate-y-[2px] hover:border-white"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-medium text-white">{p.title}</h2>
+                  <h2 className="text-lg font-medium text-white">{post.title}</h2>
                   <p className="mt-1 text-sm text-white/50">
-                    {p.author?.name ?? "Anonymous"}
+                    {post.author?.name ?? "Anonymous"}
                     {" · "}
-                    {p.publishedAt ? new Intl.DateTimeFormat("en-US", {
+                    {post.publishedAt ? new Intl.DateTimeFormat("en-US", {
                       year: "numeric",
                       month: "short",
                       day: "2-digit",
-                    }).format(new Date(p.publishedAt)) : "Unpublished"}
+                    }).format(new Date(post.publishedAt)) : "Unpublished"}
                   </p>
+                  {post.readingTimeMin} min read
                 </div>
 
                 <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-200">
@@ -54,7 +55,7 @@ export default async function PublicPostsPage() {
                 </span>
               </div>
 
-              <p className="mt-3 text-sm text-white/50">/posts/{p.slug}</p>
+              <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p>
             </Link>
           ))
         )}

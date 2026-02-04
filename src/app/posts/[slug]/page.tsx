@@ -65,6 +65,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
               }).format(new Date(post.publishedAt))
             : "Unpublished"}
           {" · "}
+          {post.readingTimeMin} min read
           <span className="text-white/50">/posts/{post.slug}</span>
         </p>
 
