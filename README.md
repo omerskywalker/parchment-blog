@@ -1,22 +1,10 @@
 # Parchment Blog
 
-A production-oriented blog platform built with **Next.js, TypeScript, Prisma, and PostgreSQL**.
-
-This repository currently contains the **foundational scaffolding**:
-
-- Next.js App Router setup
-- PostgreSQL database (via Docker)
-- Prisma ORM (v6) with migrations
-- Health check API route to verify DB connectivity
-- React Query provider wired for future data fetching
-
-Business features (auth, posts, editor, etc.) will be built incrementally on feature branches.
-
----
+A blog platform built with **Next.js, TypeScript, Prisma, and PostgreSQL**.
 
 ## Tech Stack
 
-- **Frontend / App**: Next.js (App Router), React, TypeScript
+- **Frontend / App**: Next.js (App Router), React, TypeScript, TailwindCSS
 - **Data**: PostgreSQL, Prisma ORM
 - **State / Fetching**: TanStack React Query
 - **Validation**: Zod
@@ -72,20 +60,3 @@ Visit:
 ## Project Status
 
 🚧 **In active development**
-
-Current focus:
-
-- Authentication (credentials-based)
-- User accounts
-- Post creation and management
-- Production-grade API patterns and caching
-
----
-
-## Development Workflow
-
-- `main` branch is always stable
-- New work is done on feature branches (e.g. `feat/auth-credentials`)
-- Changes are merged back into `main` via PRs
-
----
