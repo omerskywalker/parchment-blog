@@ -99,7 +99,7 @@ export async function deletePost(id: string): Promise<DeletePostResponse> {
 }
 
 export type PublishPostResponse =
-  | { ok: true; post: { id: string; publishedAt: string | null; updatedAt: string } }
+  | { ok: true; post: { id: string; slug: string; publishedAt: string | null; updatedAt: string } }
   | { ok: false; error: string; message?: string };
 
 export async function setPostPublished(
