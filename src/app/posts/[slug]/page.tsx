@@ -66,7 +66,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
             : "Unpublished"}
           {" · "}
           {post.readingTimeMin} min read
-          <span className="text-white/50">/posts/{post.slug}</span>
+          {/* <span className="text-white/50">/posts/{post.slug}</span> */}
         </p>
 
         <div className="mt-8 prose prose-invert max-w-none">
