@@ -11,7 +11,11 @@ import {
   updatePost,
   deletePost,
   setPostPublished,
+  PublishPostResponse,
+  MyPostsResponse,
+  PostDetail
 } from "@/lib/api/posts";
+
 
 export default function EditPostPage() {
   const router = useRouter();
@@ -26,17 +30,36 @@ export default function EditPostPage() {
   const [contentMd, setContentMd] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-  const postQuery = useQuery({
-    queryKey: qk.post(id ?? ""),
-    queryFn: () => fetchPost(id as string),
-    enabled: typeof id === "string" && id.length > 0,
-    retry: false,
+function applyPublishedAtToCaches(publishedAt: string | null) {
+  if (!id) return;
+
+  qc.setQueryData<PostDetail>(qk.post(id), (old) => {
+    if (!old?.ok) return old;
+    return { ...old, post: { ...old.post, publishedAt } };
   });
+
+  qc.setQueryData<MyPostsResponse>(qk.myPosts(), (old) => {
+    if (!old?.ok) return old;
+    return {
+      ...old,
+      posts: old.posts.map((p) => (p.id === id ? { ...p, publishedAt } : p)),
+    };
+  });
+}
+
+
+const postQuery = useQuery({
+  queryKey: id ? qk.post(id) : ["post", "missing-id"],
+  queryFn: () => fetchPost(id as string),
+  enabled: Boolean(id),
+  retry: false,
+});
 
   const didInit = React.useRef(false);
 
   React.useEffect(() => {
     if (!didInit.current && postQuery.data?.ok) {
+      didInit.current = true;
       setTitle(postQuery.data.post.title);
       setSlug(postQuery.data.post.slug);
       setContentMd(postQuery.data.post.contentMd);
@@ -74,20 +97,49 @@ export default function EditPostPage() {
     onError: () => setError("Something went wrong."),
   });
 
-  const publishMutation = useMutation({
-    mutationFn: (published: boolean) => setPostPublished(id as string, published),
-    onSuccess: async (res) => {
-      if (!res.ok)
-        return setError(res.message ?? "Unable to update publish state.");
-
+  type PublishCtx = {
+    prevList: MyPostsResponse | undefined;
+    prevPost: PostDetail | undefined;
+  };
+  
+  const publishMutation = useMutation<PublishPostResponse, Error, boolean, PublishCtx>({
+    mutationFn: (published) => setPostPublished(id as string, published),
+  
+    onMutate: async (published) => {
+      setError(null);
+  
+      await qc.cancelQueries({ queryKey: qk.myPosts() });
+      await qc.cancelQueries({ queryKey: qk.post(id as string) });
+  
+      const prevList = qc.getQueryData<MyPostsResponse>(qk.myPosts());
+      const prevPost = qc.getQueryData<PostDetail>(qk.post(id as string));
+  
+      const optimisticPublishedAt = published ? new Date().toISOString() : null;
+      applyPublishedAtToCaches(optimisticPublishedAt);
+  
+      return { prevList, prevPost };
+    },
+  
+    onError: (_err, _published, ctx) => {
+      if (ctx?.prevList !== undefined) qc.setQueryData(qk.myPosts(), ctx.prevList);
+      if (ctx?.prevPost !== undefined) qc.setQueryData(qk.post(id as string), ctx.prevPost);
+      setError("Something went wrong.");
+    },
+  
+    onSuccess: (res) => {
+      if (!res.ok) {
+        setError(res.message ?? "Unable to update publish state.");
+        return;
+      }
+      applyPublishedAtToCaches(res.post.publishedAt);
+    },
+  
+    onSettled: async () => {
       await qc.invalidateQueries({ queryKey: qk.myPosts() });
       await qc.invalidateQueries({ queryKey: qk.post(id as string) });
-
-      setError(null);
-      router.push("/dashboard/posts");
     },
-    onError: () => setError("Something went wrong."),
   });
+  
 
   if (!id) {
     return (
@@ -149,7 +201,7 @@ export default function EditPostPage() {
             setError(null);
             deleteMutation.mutate();
           }}
-          disabled={deleteMutation.isPending}
+          disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
           className="rounded-md border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 transition-colors hover:bg-red-500/15 disabled:opacity-60"
         >
           {deleteMutation.isPending ? "Deleting…" : "Delete"}
@@ -189,7 +241,7 @@ export default function EditPostPage() {
             setError(null);
             publishMutation.mutate(!isPublished);
           }}
-          disabled={publishMutation.isPending || saveMutation.isPending}
+          disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
           className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
         >
           {publishMutation.isPending
@@ -248,7 +300,7 @@ export default function EditPostPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={saveMutation.isPending || publishMutation.isPending}
+              disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
               className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
             >
               {saveMutation.isPending ? "Saving…" : "Save & exit"}
