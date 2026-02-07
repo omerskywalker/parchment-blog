@@ -2,6 +2,10 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { estimateReadingTimeMinutes } from "@/lib/server/reading-time";
 
+/* ============================================================
+   Types
+============================================================ */
+
 export type PublicPostCard = {
   id: string;
   title: string;
@@ -23,20 +27,32 @@ export type PublicPostDetail = {
   readingTimeMin: number;
 };
 
-// public feed (published posts only)
+export type PublicPostCursorPage = {
+  posts: PublicPostCard[];
+  nextCursor: string | null;
+};
+
+/* ============================================================
+   Cached public feed (first page only)
+   - used by /posts for fast SSR
+============================================================ */
+
 export const getPublicPosts = unstable_cache(
   async (): Promise<PublicPostCard[]> => {
     const rows = await prisma.post.findMany({
       where: { publishedAt: { not: null } },
-      orderBy: [{ publishedAt: "desc" }],
-      take: 50,
+      orderBy: [
+        { publishedAt: "desc" },
+        { id: "desc" }, // 👈 deterministic ordering
+      ],
+      take: 10, // 👈 match your UI page size
       select: {
         id: true,
         title: true,
         slug: true,
         publishedAt: true,
         updatedAt: true,
-        contentMd: true, // required to compute reading time
+        contentMd: true, // needed for reading time
         author: { select: { name: true } },
       },
     });
@@ -53,7 +69,57 @@ export const getPublicPosts = unstable_cache(
   },
 );
 
-// public post detail by slug -- ** published only **
+/* ============================================================
+   Cursor-based pagination (used by /api/public-posts)
+   - NOT cached (or can be lightly cached later)
+============================================================ */
+
+export async function getPublicPostsPage(args: {
+  cursor?: string | null;
+  take?: number;
+}): Promise<PublicPostCursorPage> {
+  const take = Math.min(Math.max(args.take ?? 10, 1), 50);
+
+  const rows = await prisma.post.findMany({
+    where: { publishedAt: { not: null } },
+    orderBy: [
+      { publishedAt: "desc" },
+      { id: "desc" },
+    ],
+    take: take + 1, // 👈 over-fetch to detect next page
+    ...(args.cursor
+      ? {
+          cursor: { id: args.cursor },
+          skip: 1,
+        }
+      : {}),
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      publishedAt: true,
+      updatedAt: true,
+      contentMd: true,
+      author: { select: { name: true } },
+    },
+  });
+
+  const hasMore = rows.length > take;
+  const page = hasMore ? rows.slice(0, take) : rows;
+
+  return {
+    posts: page.map(({ contentMd, ...p }) => ({
+      ...p,
+      readingTimeMin: estimateReadingTimeMinutes(contentMd),
+    })),
+    nextCursor: hasMore ? page[page.length - 1]!.id : null,
+  };
+}
+
+/* ============================================================
+   Public post detail by slug (published only)
+============================================================ */
+
 export function getPublicPostBySlug(slug: string) {
   return unstable_cache(
     async (): Promise<PublicPostDetail | null> => {

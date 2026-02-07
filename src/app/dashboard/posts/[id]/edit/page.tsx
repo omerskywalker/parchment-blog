@@ -51,7 +51,7 @@ function applyPublishedAtToCaches(publishedAt: string | null) {
 const postQuery = useQuery({
   queryKey: id ? qk.post(id) : ["post", "missing-id"],
   queryFn: () => fetchPost(id as string),
-  enabled: Boolean(id),
+  enabled: typeof id === "string" && id.length > 0,
   retry: false,
 });
 
@@ -286,7 +286,7 @@ const postQuery = useQuery({
             <textarea
               value={contentMd}
               onChange={(e) => setContentMd(e.target.value)}
-              className="mt-2 min-h-[260px] w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
+              className="mt-2 min-h-65 w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
               required
             />
           </div>

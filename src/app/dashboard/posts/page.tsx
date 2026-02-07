@@ -73,12 +73,12 @@ export default function MyPostsPage() {
                         {post.publishedAt ? "Published" : "Draft"}
                       </span>
 
-                      <Link
+                      {/* <Link
                         href={`/dashboard/posts/${post.id}/edit`}
                         className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
                       >
                         Edit
-                      </Link>
+                      </Link> */}
                     </div>
                   </div>
                 </li>
