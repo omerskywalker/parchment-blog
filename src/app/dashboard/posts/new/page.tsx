@@ -120,7 +120,7 @@ export default function NewPostPage() {
             <textarea
               value={form.contentMd}
               onChange={(e) => update("contentMd", e.target.value)}
-              className="mt-2 min-h-[220px] w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
+              className="mt-2 min-h-55 w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
               placeholder="Write in Markdown..."
               required
             />

@@ -1,120 +1,17 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import RegisterForm from "./register-form";
 
-import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+type Props = {
+  searchParams?: Promise<{ next?: string }>;
+};
 
-type ApiResponse = { ok: true } | { ok: false; error: string; issues?: unknown };
+export default async function RegisterPage({ searchParams }: Props) {
+  const session = await getSession();
+  if (session?.user) redirect("/dashboard");
 
-export default function RegisterPage() {
-  const router = useRouter();
+  const sp = (await searchParams) ?? {};
+  const next = sp.next ?? "/dashboard";
 
-  const [name, setName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      const data = (await res.json()) as ApiResponse;
-
-      if (!res.ok || !data.ok) {
-        if ("error" in data) {
-          if (data.error === "EMAIL_IN_USE") return setError("That email is already in use.");
-          if (data.error === "INVALID_INPUT")
-            return setError("Please check your inputs and try again.");
-          if (data.error === "INVALID_JSON") return setError("Invalid request. Please try again.");
-          return setError("Could not create account. Try again.");
-        }
-        return setError("Could not create account. Try again.");
-      }
-
-      router.push("/signin");
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <main className="grid min-h-[calc(100vh-60px)] place-items-center px-4 py-10">
-      <section className="w-full max-w-md rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] p-6 text-[rgb(var(--card-foreground))] shadow-sm">
-        <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
-        <p className="mt-1 text-sm text-[rgb(var(--muted))]">Register to start posting.</p>
-
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="text-sm font-medium">Display name (optional)</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              type="email"
-              required
-              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium">Password</label>
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              type="password"
-              required
-              className="mt-1 w-full rounded-md border border-[rgb(var(--border))] bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-black/20 focus:outline-none"
-            />
-            <p className="mt-1 text-xs text-[rgb(var(--muted))]">Minimum 10 characters.</p>
-          </div>
-
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-              {error}
-            </div>
-          )}
-
-          <button
-            disabled={loading}
-            className="w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Creating..." : "Create account"}
-          </button>
-
-          <p className="text-center text-sm text-[rgb(var(--muted))]">
-            Already have an account?{" "}
-            <Link
-              href="/signin"
-              className="font-medium text-[rgb(var(--card-foreground))] underline underline-offset-4 hover:opacity-90"
-            >
-              Sign in
-            </Link>
-          </p>
-        </form>
-      </section>
-    </main>
-  );
+  return <RegisterForm next={next} />;
 }
