@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 export default function SignInForm({ next }: { next: string }) {
   const router = useRouter();
+  const callbackUrl = next || "/dashboard";
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -23,15 +24,22 @@ export default function SignInForm({ next }: { next: string }) {
       email,
       password,
       redirect: false,
-      callbackUrl: next,
+      callbackUrl,
     });
 
     setLoading(false);
 
-    if (!res) return setError("Unexpected error. Try again.");
-    if (res.error) return setError("Invalid email or password.");
+    if (!res) {
+      setError("Unexpected error. Try again.");
+      return;
+    }
 
-    router.push(res.url ?? next);
+    if (res.error) {
+      setError("Invalid email or password.");
+      return;
+    }
+
+    router.push(res.url ?? callbackUrl);
   }
 
   return (
@@ -75,13 +83,13 @@ export default function SignInForm({ next }: { next: string }) {
             disabled={loading}
             className="w-full rounded-md bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            {loading ? "Signing in…" : "Sign in"}
           </button>
 
           <p className="text-center text-sm text-[rgb(var(--muted))]">
             New here?{" "}
             <Link
-              href={`/register?next=${encodeURIComponent(next)}`}
+              href={`/register?next=${encodeURIComponent(callbackUrl)}`}
               className="font-medium text-[rgb(var(--card-foreground))] underline underline-offset-4 hover:opacity-90"
             >
               Create an account
