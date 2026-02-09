@@ -8,6 +8,7 @@ export type MyPostsResponse =
         publishedAt: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: string[];
       }>;
     }
   | { ok: false; error: string; message?: string };
@@ -26,6 +27,7 @@ export type CreatePostInput = {
   title: string;
   contentMd: string;
   slug?: string;
+  tags?: string[];
 };
 
 export type CreatePostResponse =
@@ -53,6 +55,7 @@ export type PostDetail =
         publishedAt: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: string[];
       };
     }
   | { ok: false; error: string; message?: string };
@@ -66,6 +69,7 @@ export type UpdatePostInput = {
   title?: string;
   contentMd?: string;
   slug?: string;
+  tags?: string[];
 };
 
 export type UpdatePostResponse =
@@ -78,6 +82,7 @@ export type UpdatePostResponse =
         contentMd: string;
         publishedAt: string | null;
         updatedAt: string;
+        tags: string[];
       };
     }
   | { ok: false; error: string; message?: string };

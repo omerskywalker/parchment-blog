@@ -35,6 +35,7 @@ export async function GET() {
       publishedAt: true,
       createdAt: true,
       updatedAt: true,
+      tags: true,
     },
   });
 

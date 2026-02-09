@@ -14,6 +14,7 @@ export type PublicPostCard = {
   updatedAt: Date;
   author: { name: string | null };
   readingTimeMin: number;
+  tags: string[];
 };
 
 export type PublicPostDetail = {
@@ -25,6 +26,7 @@ export type PublicPostDetail = {
   updatedAt: Date;
   author: { name: string | null };
   readingTimeMin: number;
+  tags: string[];
 };
 
 export type PublicPostCursorPage = {
@@ -43,17 +45,18 @@ export const getPublicPosts = unstable_cache(
       where: { publishedAt: { not: null } },
       orderBy: [
         { publishedAt: "desc" },
-        { id: "desc" }, // 👈 deterministic ordering
+        { id: "desc" },
       ],
-      take: 10, // 👈 match your UI page size
+      take: 10,
       select: {
         id: true,
         title: true,
         slug: true,
         publishedAt: true,
         updatedAt: true,
-        contentMd: true, // needed for reading time
+        contentMd: true,
         author: { select: { name: true } },
+        tags: true,
       },
     });
 
@@ -86,7 +89,7 @@ export async function getPublicPostsPage(args: {
       { publishedAt: "desc" },
       { id: "desc" },
     ],
-    take: take + 1, // 👈 over-fetch to detect next page
+    take: take + 1, // over-fetch to detect next page
     ...(args.cursor
       ? {
           cursor: { id: args.cursor },
@@ -101,6 +104,7 @@ export async function getPublicPostsPage(args: {
       updatedAt: true,
       contentMd: true,
       author: { select: { name: true } },
+      tags: true,
     },
   });
 
@@ -133,6 +137,7 @@ export function getPublicPostBySlug(slug: string) {
           publishedAt: true,
           updatedAt: true,
           author: { select: { name: true } },
+          tags: true,
         },
       });
 

@@ -7,11 +7,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { createPost } from "@/lib/api/posts";
 import { qk } from "@/lib/queryKeys";
+import { parseTagsInput } from "@/lib/tags";
 
 type FormState = {
   title: string;
   contentMd: string;
   slug: string;
+  tagsInput: string;
 };
 
 export default function NewPostPage() {
@@ -22,6 +24,7 @@ export default function NewPostPage() {
     title: "",
     contentMd: "",
     slug: "",
+    tagsInput: "",
   });
 
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -61,6 +64,7 @@ export default function NewPostPage() {
       title: form.title.trim(),
       contentMd: form.contentMd,
       slug: form.slug.trim() ? form.slug.trim() : undefined,
+      tags: parseTagsInput(form.tagsInput),
     });
   }
 
@@ -125,6 +129,23 @@ export default function NewPostPage() {
               required
             />
           </div>
+
+          {/* tags */}
+          <div>
+            <label className="text-sm font-medium text-white">
+              Tags <span className="text-white/50">(optional)</span>
+            </label>
+            <input
+              value={form.tagsInput}
+              onChange={(e) => update("tagsInput", e.target.value)}
+              className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
+              placeholder="e.g. bitcoin, islam, dev"
+            />
+            <p className="mt-2 text-xs text-white/50">
+              Comma-separated list of tags.
+            </p>
+          </div>
+
 
           {/* error */}
           {formError ? (

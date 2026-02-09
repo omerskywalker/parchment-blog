@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
   }
 
-  const { title, contentMd, slug: providedSlug } = parsed.data;
+  const { title, contentMd, slug: providedSlug, tags } = parsed.data;
 
   // 3) determine slug (client can provide or we generate from title)
   const baseSlug = providedSlug ?? slugify(title);
@@ -67,6 +67,7 @@ export async function POST(req: Request) {
           contentMd,
           authorId: user.id,
           publishedAt: null,
+          tags: tags ?? [],
         },
         select: {
           id: true,
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
           publishedAt: true,
           createdAt: true,
           updatedAt: true,
+          tags: true,
         },
       });
 
