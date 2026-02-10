@@ -67,7 +67,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           {post.readingTimeMin} min read
         </p>
 
-        <TagChips tags={post.tags} />
+        <TagChips tags={post.tags} variant="detail" />
 
         <div className="mt-8 prose prose-invert max-w-none">
           <Markdown content={post.contentMd} />
