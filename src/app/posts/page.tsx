@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicPosts } from "@/lib/server/public-posts";
+import { TagChips } from "../components/TagChips";
 
 export const metadata: Metadata = {
   title: "Posts",
@@ -47,7 +48,8 @@ export default async function PublicPostsPage() {
                       day: "2-digit",
                     }).format(new Date(post.publishedAt)) : "Unpublished"}
                   </p>
-                  {post.readingTimeMin} min read
+                  <TagChips tags={post.tags} className="mt-2 mb-2" clickable={false} />
+                  <p className="mt-1">{post.readingTimeMin} min read</p>
                 </div>
 
                 <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-200">
@@ -55,7 +57,7 @@ export default async function PublicPostsPage() {
                 </span>
               </div>
 
-              <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p>
+              {/* <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p> */}
             </Link>
           ))
         )}

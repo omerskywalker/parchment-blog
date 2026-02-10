@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublicPostBySlug } from "@/lib/server/public-posts";
 
 import Markdown from "@/app/components/Markdown";
+import { TagChips } from "@app/components/TagChips";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -31,8 +32,6 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
   const post = await getPublicPostBySlug(slug);
   if (!post) notFound();
-
-  const isPublished = Boolean(post.publishedAt);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
@@ -66,8 +65,9 @@ export default async function PublicPostDetailPage({ params }: Props) {
             : "Unpublished"}
           {" · "}
           {post.readingTimeMin} min read
-          <span className="text-white/50">/posts/{post.slug}</span>
         </p>
+
+        <TagChips tags={post.tags} />
 
         <div className="mt-8 prose prose-invert max-w-none">
           <Markdown content={post.contentMd} />
