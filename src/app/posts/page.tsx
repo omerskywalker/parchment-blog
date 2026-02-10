@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicPosts } from "@/lib/server/public-posts";
+import { TagChips } from "../components/TagChips";
 
 export const metadata: Metadata = {
   title: "Posts",
@@ -32,8 +33,8 @@ export default async function PublicPostsPage() {
             <Link
               key={post.id}
               href={`/posts/${post.slug}`}
-              className="block rounded-2xl border border-white/10 bg-black/40 p-5
-              transition-all hover:bg-black/50 hover:-translate-y-[2px] hover:border-white"
+              className="block rounded-2xl border border-white/10 bg-black/40 p-4 transition-all hover:bg-black/50 hover:-translate-y-[2px] hover:border-white/60"
+
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -41,21 +42,24 @@ export default async function PublicPostsPage() {
                   <p className="mt-1 text-sm text-white/50">
                     {post.author?.name ?? "Anonymous"}
                     {" · "}
-                    {post.publishedAt ? new Intl.DateTimeFormat("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "2-digit",
-                    }).format(new Date(post.publishedAt)) : "Unpublished"}
+                    {post.publishedAt
+                      ? new Intl.DateTimeFormat("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
+                        }).format(new Date(post.publishedAt))
+                      : "Unpublished"}
+                    {" · "}
+                    {post.readingTimeMin} min read
                   </p>
-                  {post.readingTimeMin} min read
+
+                  <TagChips tags={post.tags} variant="feed" className="mt-2" />
                 </div>
 
                 <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-200">
                   Published
                 </span>
               </div>
-
-              <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p>
             </Link>
           ))
         )}

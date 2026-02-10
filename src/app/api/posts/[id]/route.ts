@@ -24,6 +24,7 @@ export async function GET(_req: Request, ctx: IdCtx) {
       publishedAt: true,
       createdAt: true,
       updatedAt: true,
+      tags: true,
     },
   });
 
@@ -63,6 +64,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
         contentMd: true,
         publishedAt: true,
         updatedAt: true,
+        tags: true,
       },
     });
 
@@ -102,7 +104,7 @@ export async function DELETE(_req: Request, ctx: IdCtx) {
 
   const existing = await prisma.post.findFirst({
     where: { id, authorId: userId },
-    select: { id: true, slug: true, publishedAt: true },
+    select: { id: true, slug: true, publishedAt: true, tags: true, },
   });
   if (!existing) return jsonError(404, ERROR_CODES.NOT_FOUND, "Post not found.");
 

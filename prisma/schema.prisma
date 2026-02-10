@@ -23,6 +23,7 @@ model Post {
   title       String
   slug        String    @unique
   contentMd   String
+  tags        String[]  @default([])
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -32,4 +33,5 @@ model Post {
 
   @@index([authorId])
   @@index([publishedAt])
+  @@index([updatedAt])
 }

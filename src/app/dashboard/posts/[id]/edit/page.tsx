@@ -15,6 +15,7 @@ import {
   MyPostsResponse,
   PostDetail
 } from "@/lib/api/posts";
+import { parseTagsInput } from "@/lib/tags";
 
 
 export default function EditPostPage() {
@@ -28,6 +29,7 @@ export default function EditPostPage() {
   const [title, setTitle] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [contentMd, setContentMd] = React.useState("");
+  const [tagsInput, setTagsInput] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
 function applyPublishedAtToCaches(publishedAt: string | null) {
@@ -63,6 +65,7 @@ const postQuery = useQuery({
       setTitle(postQuery.data.post.title);
       setSlug(postQuery.data.post.slug);
       setContentMd(postQuery.data.post.contentMd);
+      setTagsInput((postQuery.data.post.tags ?? []).join(", "));
     }
   }, [postQuery.data]);
 
@@ -72,6 +75,7 @@ const postQuery = useQuery({
         title: title.trim(),
         slug: slug.trim(),
         contentMd,
+        tags: parseTagsInput(tagsInput),
       }),
     onSuccess: async (res) => {
       if (!res.ok) return setError(res.message ?? "Unable to save.");
@@ -280,6 +284,22 @@ const postQuery = useQuery({
               required
             />
           </div>
+
+          <div>
+            <label className="text-sm font-medium text-white">
+              Tags <span className="text-white/50">(optional)</span>
+            </label>
+            <input
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
+              placeholder="e.g. bitcoin, hard-money, dev"
+            />
+            <p className="mt-2 text-xs text-white/50">
+              Comma-separated list of tags.
+            </p>
+          </div>
+
 
           <div>
             <label className="text-sm font-medium text-white">Content</label>
