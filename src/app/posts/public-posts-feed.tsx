@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { PublicPostCard } from "../../lib/server/public-posts";
+import { TagChips } from "../components/TagChips";
 
 type ApiPost = {
   id: string;
@@ -12,16 +13,18 @@ type ApiPost = {
   updatedAt: string;
   author: { name: string | null };
   readingTimeMin: number;
+  tags: string[];
 };
 
 type ApiPage =
   | { ok: true; posts: ApiPost[]; nextCursor: string | null }
   | { ok: false; error: string; message?: string };
 
-async function fetchPublicPage(cursor: string | null) {
+async function fetchPublicPage(args: { cursor: string | null; tag?: string }) {
   const params = new URLSearchParams();
-  if (cursor) params.set("cursor", cursor);
+  if (args.cursor) params.set("cursor", args.cursor);
   params.set("take", "10");
+  if (args.tag) params.set("tag", args.tag);
 
   const res = await fetch(`/api/public-posts?${params.toString()}`);
 
@@ -38,13 +41,20 @@ async function fetchPublicPage(cursor: string | null) {
 export default function PublicPostsFeed({
   initialPosts,
   initialCursor,
+  tag,
+  scope = "posts",
 }: {
   initialPosts: PublicPostCard[];
   initialCursor: string | null;
+  tag?: string;
+  scope?: "home" | "posts";
 }) {
+  const normalizedTag = tag?.trim().toLowerCase() || undefined;
+
   const q = useInfiniteQuery({
-    queryKey: ["public-posts-cursor", { take: 10 }],
-    queryFn: ({ pageParam }) => fetchPublicPage(pageParam ?? null),
+    queryKey: ["public-posts-cursor", scope, { take: 10, tag: normalizedTag ?? null }],
+    queryFn: ({ pageParam }) =>
+      fetchPublicPage({ cursor: (pageParam ?? null) as string | null, tag: normalizedTag }),
     initialPageParam: initialCursor, // first fetch grabs page after SSR
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialData: {
@@ -59,6 +69,7 @@ export default function PublicPostsFeed({
             updatedAt: new Date(p.updatedAt).toISOString(),
             author: p.author,
             readingTimeMin: p.readingTimeMin,
+            tags: p.tags
           })),
           nextCursor: initialCursor,
         },
@@ -79,9 +90,7 @@ export default function PublicPostsFeed({
       {q.isError ? (
         <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
           <p className="text-white/80">Unable to load posts.</p>
-          <p className="mt-1 text-sm text-white/50">
-            {(q.error as Error).message}
-          </p>
+          <p className="mt-1 text-sm text-white/50">{(q.error as Error).message}</p>
         </div>
       ) : posts.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
@@ -116,16 +125,16 @@ export default function PublicPostsFeed({
                   </p>
                 </div>
 
-                <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-200">
-                  Published
-                </span>
               </div>
+              <TagChips tags={post.tags} variant="feed" className="mt-2" />
 
-              <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p>
+              
+
+              {/* <p className="mt-3 text-sm text-white/50">/posts/{post.slug}</p> */}
             </Link>
           ))}
 
-          <div className="pt-4 flex justify-center">
+          <div className="flex justify-center pt-4">
             {hasMore ? (
               <button
                 onClick={() => q.fetchNextPage()}

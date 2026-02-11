@@ -87,22 +87,18 @@ return unstable_cache(
 export async function getPublicPostsPage(args: {
   cursor?: string | null;
   take?: number;
+  tag?: string;
 }): Promise<PublicPostCursorPage> {
   const take = Math.min(Math.max(args.take ?? 10, 1), 50);
 
   const rows = await prisma.post.findMany({
-    where: { publishedAt: { not: null } },
-    orderBy: [
-      { publishedAt: "desc" },
-      { id: "desc" },
-    ],
-    take: take + 1, // over-fetch to detect next page
-    ...(args.cursor
-      ? {
-          cursor: { id: args.cursor },
-          skip: 1,
-        }
-      : {}),
+    where: {
+      publishedAt: { not: null },
+      ...(args.tag ? { tags: { has: args.tag } } : {}),
+    },
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(args.cursor ? { cursor: { id: args.cursor }, skip: 1 } : {}),
     select: {
       id: true,
       title: true,
@@ -114,6 +110,7 @@ export async function getPublicPostsPage(args: {
       tags: true,
     },
   });
+  
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;

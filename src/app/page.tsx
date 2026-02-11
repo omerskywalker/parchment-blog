@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPublicPosts } from "@/lib/server/public-posts";
+import { TagChips } from "@app/components/TagChips";
 
 export default async function HomePage() {
   const posts = await getPublicPosts();
@@ -36,6 +37,7 @@ export default async function HomePage() {
                 <p className="mt-1 text-sm text-white/50">
                   {p.author?.name ?? "Anonymous"}
                 </p>
+                <TagChips tags={p.tags} variant="feed" className="mt-2" />
               </Link>
             ))}
           </div>
