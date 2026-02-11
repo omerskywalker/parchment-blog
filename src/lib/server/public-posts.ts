@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { estimateReadingTimeMinutes } from "@/lib/server/reading-time";
 
 /* ============================================================
-   Types
+   types
 ============================================================ */
 
 export type PublicPostCard = {
@@ -35,67 +35,70 @@ export type PublicPostCursorPage = {
 };
 
 /* ============================================================
-   Cached public feed (first page only)
-   - used by /posts for fast SSR
+cached public feed (first page only)
+- used by /posts for fast SSR
+- optionally filtered by tag
 ============================================================ */
 
-export const getPublicPosts = unstable_cache(
-  async (): Promise<PublicPostCard[]> => {
-    const rows = await prisma.post.findMany({
-      where: { publishedAt: { not: null } },
-      orderBy: [
-        { publishedAt: "desc" },
-        { id: "desc" },
-      ],
-      take: 10,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        publishedAt: true,
-        updatedAt: true,
-        contentMd: true,
-        author: { select: { name: true } },
-        tags: true,
-      },
-    });
+export function getPublicPosts(args?: { tag?: string | null }) {
+const tag = args?.tag?.trim() || null;
 
-    return rows.map(({ contentMd, ...p }) => ({
-      ...p,
-      readingTimeMin: estimateReadingTimeMinutes(contentMd),
-    }));
-  },
-  ["public-posts"],
-  {
-    revalidate: 60,
-    tags: ["public-posts"],
-  },
-);
+return unstable_cache(
+ async (): Promise<PublicPostCard[]> => {
+   const rows = await prisma.post.findMany({
+     where: {
+       publishedAt: { not: null },
+       ...(tag ? { tags: { has: tag } } : {}),
+     },
+     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+     take: 10,
+     select: {
+       id: true,
+       title: true,
+       slug: true,
+       publishedAt: true,
+       updatedAt: true,
+       contentMd: true,
+       author: { select: { name: true } },
+       tags: true,
+     },
+   });
+
+   return rows.map(({ contentMd, ...p }) => ({
+     ...p,
+     readingTimeMin: estimateReadingTimeMinutes(contentMd),
+   }));
+ },
+ // cache key varies by tag (so each filtered feed is cacheable)
+ ["public-posts", tag ?? "all"],
+ {
+   revalidate: 60,
+   tags: ["public-posts"],
+ },
+)();
+}
+
 
 /* ============================================================
-   Cursor-based pagination (used by /api/public-posts)
+   cursor-based pagination (used by /api/public-posts)
    - NOT cached (or can be lightly cached later)
 ============================================================ */
 
 export async function getPublicPostsPage(args: {
   cursor?: string | null;
   take?: number;
+  tag?: string;
 }): Promise<PublicPostCursorPage> {
   const take = Math.min(Math.max(args.take ?? 10, 1), 50);
 
   const rows = await prisma.post.findMany({
-    where: { publishedAt: { not: null } },
-    orderBy: [
-      { publishedAt: "desc" },
-      { id: "desc" },
-    ],
-    take: take + 1, // over-fetch to detect next page
-    ...(args.cursor
-      ? {
-          cursor: { id: args.cursor },
-          skip: 1,
-        }
-      : {}),
+    where: {
+      publishedAt: { not: null },
+      ...(args.tag ? { tags: { has: args.tag } } : {}),
+    },
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(args.cursor ? { cursor: { id: args.cursor }, skip: 1 } : {}),
     select: {
       id: true,
       title: true,
@@ -107,6 +110,7 @@ export async function getPublicPostsPage(args: {
       tags: true,
     },
   });
+  
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;
@@ -121,7 +125,7 @@ export async function getPublicPostsPage(args: {
 }
 
 /* ============================================================
-   Public post detail by slug (published only)
+   public post detail by slug (published only)
 ============================================================ */
 
 export function getPublicPostBySlug(slug: string) {

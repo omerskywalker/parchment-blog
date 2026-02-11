@@ -42,10 +42,6 @@ export default async function PublicPostDetailPage({ params }: Props) {
         >
           ← Back to posts
         </Link>
-
-          <span className="shrink-0 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-200">
-            Published
-          </span>
       </div>
 
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">

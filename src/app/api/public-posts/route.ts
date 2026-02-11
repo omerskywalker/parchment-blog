@@ -12,11 +12,14 @@ export async function GET(req: Request) {
 
     const cursor = url.searchParams.get("cursor");
     const takeRaw = url.searchParams.get("take");
+    const tagRaw = url.searchParams.get("tag");
 
     const parsedTake = takeRaw ? Number(takeRaw) : undefined;
     const take = Number.isFinite(parsedTake) ? parsedTake : undefined;
 
-    const data = await getPublicPostsPage({ cursor, take });
+    const tag = tagRaw?.trim().toLowerCase() || undefined;
+
+    const data = await getPublicPostsPage({ cursor, take, tag });
 
     return NextResponse.json({ ok: true as const, ...data });
   } catch (err) {
