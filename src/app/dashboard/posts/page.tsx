@@ -30,7 +30,7 @@ export default function MyPostsPage() {
           href="/dashboard/posts/new"
           className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
         >
-          New post
+          + New post
         </Link>
       </div>
 
