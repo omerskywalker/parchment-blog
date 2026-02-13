@@ -91,7 +91,7 @@ export async function PATCH(req: Request, ctx: IdCtx) {
       return jsonError(409, ERROR_CODES.CONFLICT, "Unable to update post.");
     }
 
-    console.error("PATCH /api/posts/[id] error:", err);
+    console.error("PATCH /api/dashboards/posts/[id] error:", err);
     return jsonError(500, ERROR_CODES.INTERNAL_ERROR, "Something went wrong.");
   }
 }

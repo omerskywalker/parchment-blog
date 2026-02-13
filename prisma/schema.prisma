@@ -31,7 +31,28 @@ model Post {
   authorId    String
   author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  viewCount   Int       @default(0)
+  fireCount   Int       @default(0)
+  reactions   PostReaction[]
+
   @@index([authorId])
   @@index([publishedAt])
   @@index([updatedAt])
+}
+
+enum ReactionKind {
+  FIRE
+}
+
+model PostReaction {
+  id        String       @id @default(cuid())
+  postId    String
+  visitorId String
+  kind      ReactionKind
+  createdAt DateTime     @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, visitorId, kind])
+  @@index([postId])
 }
