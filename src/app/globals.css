@@ -1,6 +1,31 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+@layer utilities {
+  .pb-fade-in {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: pb-fade-in 420ms ease-out forwards;
+    animation-delay: var(--pb-delay, 0ms);
+  }
+
+  @keyframes pb-fade-in {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pb-fade-in {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+}
+
+
 /*
   Design tokens (RGB values so Tailwind arbitrary colors work cleanly)
   These are global defaults for the app.

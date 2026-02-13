@@ -35,7 +35,7 @@ export type CreatePostResponse =
   | { ok: false; error: string; message?: string };
 
 export async function createPost(input: CreatePostInput): Promise<CreatePostResponse> {
-  const res = await fetch("/api/posts", {
+  const res = await fetch("/api/dashboard/posts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -61,7 +61,7 @@ export type PostDetail =
   | { ok: false; error: string; message?: string };
 
 export async function fetchPost(id: string): Promise<PostDetail> {
-  const res = await fetch(`/api/posts/${id}`, { method: "GET" });
+  const res = await fetch(`/api/dashboard/posts/${id}`, { method: "GET" });
   return res.json();
 }
 
@@ -88,7 +88,7 @@ export type UpdatePostResponse =
   | { ok: false; error: string; message?: string };
 
 export async function updatePost(id: string, input: UpdatePostInput): Promise<UpdatePostResponse> {
-  const res = await fetch(`/api/posts/${id}`, {
+  const res = await fetch(`/api/dashboard/posts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -99,7 +99,7 @@ export async function updatePost(id: string, input: UpdatePostInput): Promise<Up
 export type DeletePostResponse = { ok: true } | { ok: false; error: string; message?: string };
 
 export async function deletePost(id: string): Promise<DeletePostResponse> {
-  const res = await fetch(`/api/posts/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/dashboard/posts/${id}`, { method: "DELETE" });
   return res.json();
 }
 
@@ -111,7 +111,7 @@ export async function setPostPublished(
   id: string,
   published: boolean,
 ): Promise<PublishPostResponse> {
-  const res = await fetch(`/api/posts/${id}/publish`, {
+  const res = await fetch(`/api/dashboard/posts/${id}/publish`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ published }),
