@@ -15,6 +15,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
     where: { slug },
     select: { id: true },
   });
+
   if (!post) return jsonError(404, ERROR_CODES.NOT_FOUND, "Post not found.");
 
   const existing = await prisma.postReaction.findUnique({
@@ -24,7 +25,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
     select: { id: true },
   });
 
-  // toggle in a transaction so counts stay consistent
   const result = await prisma.$transaction(async (tx) => {
     if (existing) {
       await tx.postReaction.delete({ where: { id: existing.id } });
@@ -48,5 +48,5 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
     }
   });
 
-  return NextResponse.json({ ok: true as const, ...result });
+  return NextResponse.json({ ok: true as const, firedByMe: result.fired, fireCount: result.fireCount });
 }
