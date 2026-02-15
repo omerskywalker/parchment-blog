@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getPublicPostBySlug } from "@/lib/server/public-posts";
-import { PostStatsBar } from "@/app/components/PostStatsBar";
+import PostStatsBar from "@/app/components/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
 
@@ -64,7 +64,11 @@ export default async function PublicPostDetailPage({ params }: Props) {
           {post.readingTimeMin} min read
         </p>
 
-        <PostStatsBar slug={post.slug} />
+        <PostStatsBar
+          slug={post.slug}
+          initialViewCount={post.viewCount}
+          initialFireCount={post.fireCount}
+        />
 
         <TagChips tags={post.tags} variant="detail" />
 

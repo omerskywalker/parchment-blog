@@ -27,6 +27,9 @@ export type PublicPostDetail = {
   author: { name: string | null };
   readingTimeMin: number;
   tags: string[];
+
+  viewCount: number;
+  fireCount: number;
 };
 
 export type PublicPostCursorPage = {
@@ -142,6 +145,9 @@ export function getPublicPostBySlug(slug: string) {
           updatedAt: true,
           author: { select: { name: true } },
           tags: true,
+
+          viewCount: true,
+          fireCount: true,
         },
       });
 
