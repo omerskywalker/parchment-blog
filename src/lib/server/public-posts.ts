@@ -12,7 +12,7 @@ export type PublicPostCard = {
   slug: string;
   publishedAt: Date | null;
   updatedAt: Date;
-  author: { name: string | null };
+  author: { name: string | null; username: string | null };
   readingTimeMin: number;
   tags: string[];
 };
@@ -24,7 +24,7 @@ export type PublicPostDetail = {
   contentMd: string;
   publishedAt: Date | null;
   updatedAt: Date;
-  author: { name: string | null };
+  author: { name: string | null; username: string | null };
   readingTimeMin: number;
   tags: string[];
 
@@ -62,7 +62,7 @@ return unstable_cache(
        publishedAt: true,
        updatedAt: true,
        contentMd: true,
-       author: { select: { name: true } },
+       author: { select: { name: true, username: true } },
        tags: true,
      },
    });
@@ -109,7 +109,7 @@ export async function getPublicPostsPage(args: {
       publishedAt: true,
       updatedAt: true,
       contentMd: true,
-      author: { select: { name: true } },
+      author: { select: { name: true, username: true } },
       tags: true,
     },
   });
@@ -143,7 +143,7 @@ export function getPublicPostBySlug(slug: string) {
           contentMd: true,
           publishedAt: true,
           updatedAt: true,
-          author: { select: { name: true } },
+          author: { select: { name: true, username: true } },
           tags: true,
 
           viewCount: true,

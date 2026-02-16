@@ -11,12 +11,12 @@ import {
 } from "@/lib/api/profile";
 
 function s3PublicUrlFromKey(key: string | null | undefined) {
-  if (!key) return null;
-  const bucket = process.env.NEXT_PUBLIC_AWS_S3_BUCKET;
-  const region = process.env.NEXT_PUBLIC_AWS_REGION;
-  if (!bucket || !region) return null;
-  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-}
+    if (!key) return null;
+    const base = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL;
+    if (!base) return null;
+    return `${base.replace(/\/$/, "")}/${key}`;
+  }
+  
 
 export default function ProfilePage() {
   const qc = useQueryClient();

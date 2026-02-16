@@ -1,30 +1,42 @@
-export type MeProfileResponse =
+export type MyProfileResponse =
   | {
       ok: true;
-      user: { id: string; name: string | null; email: string; username: string | null; bio: string | null; avatarKey: string | null };
+      user: {
+        email: string;
+        name: string | null;
+        username: string | null;
+        bio: string | null;
+        avatarKey: string | null;
+      };
     }
   | { ok: false; error: string; message?: string };
 
-export async function fetchMyProfile(): Promise<MeProfileResponse> {
-  const res = await fetch("/api/me/profile", { method: "GET" });
+export async function fetchMyProfile(): Promise<MyProfileResponse> {
+  const res = await fetch("/api/dashboard/profile", { method: "GET" });
   return res.json();
 }
 
-export type PatchProfileInput = {
+export type PatchMyProfileInput = {
   username?: string;
   bio?: string;
   avatarKey?: string;
 };
 
-export type PatchProfileResponse =
+export type PatchMyProfileResponse =
   | {
       ok: true;
-      user: { id: string; name: string | null; email: string; username: string | null; bio: string | null; avatarKey: string | null };
+      user: {
+        email: string;
+        name: string | null;
+        username: string | null;
+        bio: string | null;
+        avatarKey: string | null;
+      };
     }
   | { ok: false; error: string; message?: string };
 
-export async function patchMyProfile(input: PatchProfileInput): Promise<PatchProfileResponse> {
-  const res = await fetch("/api/me/profile", {
+export async function patchMyProfile(input: PatchMyProfileInput): Promise<PatchMyProfileResponse> {
+  const res = await fetch("/api/dashboard/profile", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -33,11 +45,11 @@ export async function patchMyProfile(input: PatchProfileInput): Promise<PatchPro
 }
 
 export type PresignAvatarResponse =
-  | { ok: true; key: string; uploadUrl: string; publicUrl: string }
+  | { ok: true; uploadUrl: string; key: string }
   | { ok: false; error: string; message?: string };
 
 export async function presignAvatarUpload(contentType: string): Promise<PresignAvatarResponse> {
-  const res = await fetch("/api/uploads/avatar", {
+  const res = await fetch("/api/dashboard/profile/avatar/presign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contentType }),
@@ -48,8 +60,13 @@ export async function presignAvatarUpload(contentType: string): Promise<PresignA
 export async function uploadToS3PutUrl(uploadUrl: string, file: File): Promise<void> {
   const res = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": file.type },
+    headers: {
+      "Content-Type": file.type,
+    },
     body: file,
   });
-  if (!res.ok) throw new Error("Upload failed.");
+
+  if (!res.ok) {
+    throw new Error(`S3 upload failed (${res.status})`);
+  }
 }

@@ -51,7 +51,13 @@ export default async function PublicPostDetailPage({ params }: Props) {
         </h1>
 
         <p className="mt-2 text-sm text-white/50">
-          {post.author?.name ?? "Anonymous"}
+          {post.author?.username ? (
+            <Link href={`/u/${post.author.username}`} className="hover:underline">
+              {post.author?.name ?? post.author.username}
+            </Link>
+          ) : (
+            <span>{post.author?.name ?? "Anonymous"}</span>
+          )}
           {" · "}
           {post.publishedAt
             ? new Intl.DateTimeFormat("en-US", {
