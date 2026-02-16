@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { s3PublicUrlFromKey } from "@/lib/s3";
 
 import {
   fetchMyProfile,
@@ -9,13 +10,6 @@ import {
   presignAvatarUpload,
   uploadToS3PutUrl,
 } from "@/lib/api/profile";
-
-function s3PublicUrlFromKey(key: string | null | undefined) {
-    if (!key) return null;
-    const base = process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL;
-    if (!base) return null;
-    return `${base.replace(/\/$/, "")}/${key}`;
-  }
   
 
 export default function ProfilePage() {
@@ -123,16 +117,32 @@ export default function ProfilePage() {
             </div>
 
             <div className="min-w-0 flex-1 space-y-4">
-              <div>
-                <label className="text-sm text-white/60">Username</label>
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. omerskywalker"
-                  className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
-                />
-                <p className="mt-1 text-xs text-white/40">Public URL: /u/{username.trim().toLowerCase() || "username"}</p>
-              </div>
+                <div>
+                    <label className="text-sm text-white/60">Username</label>
+                    <input
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="e.g. omerskywalker"
+                        className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
+                    />
+
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <p className="text-xs text-white/40">
+                        Public URL: /u/{username.trim().toLowerCase() || "username"}
+                        </p>
+
+                        {username.trim() ? (
+                        <a
+                            href={`/u/${username.trim().toLowerCase()}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                        >
+                            View public profile <span className="text-white/40">↗</span>
+                        </a>
+                        ) : null}
+                    </div>
+            </div>
 
               <div>
                 <label className="text-sm text-white/60">Bio</label>

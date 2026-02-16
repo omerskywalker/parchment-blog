@@ -6,6 +6,7 @@ import { getPublicPostBySlug } from "@/lib/server/public-posts";
 import PostStatsBar from "@/app/components/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
+import { s3PublicUrlFromKey } from "@/lib/s3";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -52,12 +53,35 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
         <p className="mt-2 text-sm text-white/50">
           {post.author?.username ? (
-            <Link href={`/u/${post.author.username}`} className="hover:underline">
-              {post.author?.name ?? post.author.username}
+            <Link
+              href={`/u/${post.author.username}`}
+              className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
+            >
+              {/* Avatar thumb */}
+              {post.author.avatarKey ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
+                  alt=""
+                  className="h-5 w-5 rounded-full border border-white/10 object-cover"
+                />
+              ) : (
+                <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+              )}
+
+              {/* Name + micro arrow */}
+              <span className="underline-offset-4 group-hover:underline">
+                {post.author.name ?? post.author.username}
+              </span>
+              <span className="text-white/30 transition group-hover:text-white/50">→</span>
             </Link>
           ) : (
-            <span>{post.author?.name ?? "Anonymous"}</span>
+            <span className="inline-flex items-center gap-2 text-white/70">
+              <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+              {post.author?.name ?? "Anonymous"}
+            </span>
           )}
+
           {" · "}
           {post.publishedAt
             ? new Intl.DateTimeFormat("en-US", {
@@ -69,6 +93,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           {" · "}
           {post.readingTimeMin} min read
         </p>
+
 
         <PostStatsBar
           slug={post.slug}
