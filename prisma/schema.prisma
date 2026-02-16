@@ -15,6 +15,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  username  String?  @unique
+  bio       String?  @db.VarChar(280)
+  avatarKey String?
+
   posts        Post[]
 }
 
