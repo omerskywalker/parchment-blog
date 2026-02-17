@@ -13,21 +13,21 @@ type Props = {
 };
 
 export async function generateMetadata({
-    params,
-  }: {
-    params: Promise<{ slug: string }>;
-  }): Promise<Metadata> {
-    const { slug } = await params;
-    const post = await getPublicPostBySlug(slug);
-  
-    if (!post) return { title: "Post not found" };
-  
-    return {
-      title: post.title,
-      alternates: { canonical: `/posts/${post.slug}` },
-      // later: description, openGraph, twitter
-    };
-  }
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPublicPostBySlug(slug);
+
+  if (!post) return { title: "Post not found" };
+
+  return {
+    title: post.title,
+    alternates: { canonical: `/posts/${post.slug}` },
+    // later: description, openGraph, twitter
+  };
+}
 
 export default async function PublicPostDetailPage({ params }: Props) {
   const { slug } = await params;
@@ -47,9 +47,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
       </div>
 
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-white">
-          {post.title}
-        </h1>
+        <h1 className="text-3xl font-semibold tracking-tight text-white">{post.title}</h1>
 
         <p className="mt-2 text-sm text-white/50">
           {post.author?.username ? (
@@ -81,7 +79,6 @@ export default async function PublicPostDetailPage({ params }: Props) {
               {post.author?.name ?? "Anonymous"}
             </span>
           )}
-
           {" · "}
           {post.publishedAt
             ? new Intl.DateTimeFormat("en-US", {
@@ -94,7 +91,6 @@ export default async function PublicPostDetailPage({ params }: Props) {
           {post.readingTimeMin} min read
         </p>
 
-
         <PostStatsBar
           slug={post.slug}
           initialViewCount={post.viewCount}
@@ -103,7 +99,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
         <TagChips tags={post.tags} variant="detail" />
 
-        <div className="mt-8 prose prose-invert max-w-none">
+        <div className="prose prose-invert mt-8 max-w-none">
           <Markdown content={post.contentMd} />
         </div>
       </article>

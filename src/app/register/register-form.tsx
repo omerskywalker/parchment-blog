@@ -42,7 +42,6 @@ export default function RegisterForm({ next }: { next: string }) {
       }
 
       router.push(`/signin?next=${encodeURIComponent(next)}`);
-
     } catch {
       setError("Network error. Please try again.");
     } finally {

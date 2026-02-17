@@ -9,7 +9,9 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
       <p className="mt-2 text-[rgb(var(--muted))]">
-        {session?.user?.email ? `Signed in as ${session.user.email}` : "Manage your drafts and published posts."}
+        {session?.user?.email
+          ? `Signed in as ${session.user.email}`
+          : "Manage your drafts and published posts."}
       </p>
 
       <div className="mt-4">

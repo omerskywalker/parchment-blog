@@ -23,7 +23,10 @@
       transform: none !important;
     }
     @media (prefers-reduced-motion: reduce) {
-      .pb-pop, .pb-num { animation: none !important; }
+      .pb-pop,
+      .pb-num {
+        animation: none !important;
+      }
     }
   }
 }
@@ -33,25 +36,38 @@
     animation: pb-pop 180ms ease-out;
   }
   @keyframes pb-pop {
-    0% { transform: scale(1); }
-    60% { transform: scale(1.12); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    60% {
+      transform: scale(1.12);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 
   .pb-num {
     animation: pb-num 160ms ease-out;
   }
   @keyframes pb-num {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .pb-pop, .pb-num { animation: none !important; }
+    .pb-pop,
+    .pb-num {
+      animation: none !important;
+    }
   }
 }
-
-
 
 /*
   Design tokens (RGB values so Tailwind arbitrary colors work cleanly)

@@ -62,6 +62,10 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ ok: true as const, user });
   } catch {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Could not update profile (maybe username taken).");
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Could not update profile (maybe username taken).",
+    );
   }
 }

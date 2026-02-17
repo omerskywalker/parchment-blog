@@ -50,38 +50,41 @@ export default function MyPostsPage() {
           <ul className="space-y-3">
             {data.posts.map((post) => {
               return (
-                <Link key={post.id + post.publishedAt} href={`/dashboard/posts/${post.id}/edit`} className="block rounded-2xl border border-white/10 bg-black/40 p-5
-                transition-all hover:bg-black/50 hover:border-white">
-                <li key={post.id} className="">
-                  <div className="flex items-start justify-between gap-4">
-                    {/* left: title + slug */}
-                    <div>
-                      <p className="text-base font-medium text-white">{post.title}</p>
-                      <p className="mt-1 text-sm text-white/50">/posts/{post.slug}</p>
-                    </div>
+                <Link
+                  key={post.id + post.publishedAt}
+                  href={`/dashboard/posts/${post.id}/edit`}
+                  className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:border-white hover:bg-black/50"
+                >
+                  <li key={post.id} className="">
+                    <div className="flex items-start justify-between gap-4">
+                      {/* left: title + slug */}
+                      <div>
+                        <p className="text-base font-medium text-white">{post.title}</p>
+                        <p className="mt-1 text-sm text-white/50">/posts/{post.slug}</p>
+                      </div>
 
-                    {/* right: status + actions */}
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={[
-                          "shrink-0 rounded-full px-2.5 py-1 text-xs",
-                          post.publishedAt
-                            ? "bg-emerald-500/15 text-emerald-200"
-                            : "bg-white/10 text-white/70",
-                        ].join(" ")}
-                      >
-                        {post.publishedAt ? "Published" : "Draft"}
-                      </span>
+                      {/* right: status + actions */}
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={[
+                            "shrink-0 rounded-full px-2.5 py-1 text-xs",
+                            post.publishedAt
+                              ? "bg-emerald-500/15 text-emerald-200"
+                              : "bg-white/10 text-white/70",
+                          ].join(" ")}
+                        >
+                          {post.publishedAt ? "Published" : "Draft"}
+                        </span>
 
-                      {/* <Link
+                        {/* <Link
                         href={`/dashboard/posts/${post.id}/edit`}
                         className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
                       >
                         Edit
                       </Link> */}
+                      </div>
                     </div>
-                  </div>
-                </li>
+                  </li>
                 </Link>
               );
             })}

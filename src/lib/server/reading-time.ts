@@ -20,10 +20,7 @@ export function estimateReadingTimeMinutes(markdown: string): number {
   const stripped = keepAltText.replace(/[>*_#[\]()`~\-]/g, " ");
 
   // collapse whitespace
-  const words = stripped
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
+  const words = stripped.trim().split(/\s+/).filter(Boolean).length;
 
   const minutes = Math.ceil(words / WORDS_PER_MINUTE);
   return Math.max(1, minutes);

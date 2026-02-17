@@ -18,7 +18,12 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   const parsed = publishPostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid input.",
+      z.treeifyError(parsed.error),
+    );
   }
 
   // ensure valid ownership
@@ -42,8 +47,8 @@ export async function PATCH(req: Request, ctx: IdCtx) {
     },
   });
 
-    revalidateTag("public-posts", "default");
-    revalidateTag(`public-post:${post.slug}`, "default");
+  revalidateTag("public-posts", "default");
+  revalidateTag(`public-post:${post.slug}`, "default");
 
   return NextResponse.json({ ok: true as const, post });
 }

@@ -43,7 +43,12 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   const parsed = updatePostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid input.",
+      z.treeifyError(parsed.error),
+    );
   }
 
   // ensure valid ownership
@@ -79,7 +84,6 @@ export async function PATCH(req: Request, ctx: IdCtx) {
       revalidateTag(`public-post:${post.slug}`, "default");
     }
 
-
     return NextResponse.json({ ok: true as const, post });
   } catch (err) {
     // if the slug is colliding, Prisma throws P2002
@@ -104,7 +108,7 @@ export async function DELETE(_req: Request, ctx: IdCtx) {
 
   const existing = await prisma.post.findFirst({
     where: { id, authorId: userId },
-    select: { id: true, slug: true, publishedAt: true, tags: true, },
+    select: { id: true, slug: true, publishedAt: true, tags: true },
   });
   if (!existing) return jsonError(404, ERROR_CODES.NOT_FOUND, "Post not found.");
 

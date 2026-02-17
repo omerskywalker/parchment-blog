@@ -32,7 +32,12 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid input.",
+      z.treeifyError(parsed.error),
+    );
   }
 
   const bucket = process.env.AWS_S3_BUCKET;
@@ -42,7 +47,12 @@ export async function POST(req: Request) {
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (!user) return jsonError(404, ERROR_CODES.NOT_FOUND, "User not found.");
 
-  const ext = parsed.data.contentType === "image/png" ? "png" : parsed.data.contentType === "image/webp" ? "webp" : "jpg";
+  const ext =
+    parsed.data.contentType === "image/png"
+      ? "png"
+      : parsed.data.contentType === "image/webp"
+        ? "webp"
+        : "jpg";
   const key = `avatars/${user.id}/${crypto.randomUUID()}.${ext}`;
 
   const cmd = new PutObjectCommand({
