@@ -48,7 +48,12 @@ export default async function PublicPostsPage({ searchParams }: Props) {
       </div>
 
       {/* client infinite feed */}
-      <PublicPostsFeed initialPosts={initialPosts} initialCursor={initialCursor} tag={tag} scope="posts" />
+      <PublicPostsFeed
+        initialPosts={initialPosts}
+        initialCursor={initialCursor}
+        tag={tag}
+        scope="posts"
+      />
     </main>
   );
 }

@@ -13,10 +13,9 @@ import {
   setPostPublished,
   PublishPostResponse,
   MyPostsResponse,
-  PostDetail
+  PostDetail,
 } from "@/lib/api/posts";
 import { parseTagsInput } from "@/lib/tags";
-
 
 export default function EditPostPage() {
   const router = useRouter();
@@ -32,30 +31,29 @@ export default function EditPostPage() {
   const [tagsInput, setTagsInput] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
-function applyPublishedAtToCaches(publishedAt: string | null) {
-  if (!id) return;
+  function applyPublishedAtToCaches(publishedAt: string | null) {
+    if (!id) return;
 
-  qc.setQueryData<PostDetail>(qk.post(id), (old) => {
-    if (!old?.ok) return old;
-    return { ...old, post: { ...old.post, publishedAt } };
+    qc.setQueryData<PostDetail>(qk.post(id), (old) => {
+      if (!old?.ok) return old;
+      return { ...old, post: { ...old.post, publishedAt } };
+    });
+
+    qc.setQueryData<MyPostsResponse>(qk.myPosts(), (old) => {
+      if (!old?.ok) return old;
+      return {
+        ...old,
+        posts: old.posts.map((p) => (p.id === id ? { ...p, publishedAt } : p)),
+      };
+    });
+  }
+
+  const postQuery = useQuery({
+    queryKey: id ? qk.post(id) : ["post", "missing-id"],
+    queryFn: () => fetchPost(id as string),
+    enabled: typeof id === "string" && id.length > 0,
+    retry: false,
   });
-
-  qc.setQueryData<MyPostsResponse>(qk.myPosts(), (old) => {
-    if (!old?.ok) return old;
-    return {
-      ...old,
-      posts: old.posts.map((p) => (p.id === id ? { ...p, publishedAt } : p)),
-    };
-  });
-}
-
-
-const postQuery = useQuery({
-  queryKey: id ? qk.post(id) : ["post", "missing-id"],
-  queryFn: () => fetchPost(id as string),
-  enabled: typeof id === "string" && id.length > 0,
-  retry: false,
-});
 
   const didInit = React.useRef(false);
 
@@ -105,31 +103,31 @@ const postQuery = useQuery({
     prevList: MyPostsResponse | undefined;
     prevPost: PostDetail | undefined;
   };
-  
+
   const publishMutation = useMutation<PublishPostResponse, Error, boolean, PublishCtx>({
     mutationFn: (published) => setPostPublished(id as string, published),
-  
+
     onMutate: async (published) => {
       setError(null);
-  
+
       await qc.cancelQueries({ queryKey: qk.myPosts() });
       await qc.cancelQueries({ queryKey: qk.post(id as string) });
-  
+
       const prevList = qc.getQueryData<MyPostsResponse>(qk.myPosts());
       const prevPost = qc.getQueryData<PostDetail>(qk.post(id as string));
-  
+
       const optimisticPublishedAt = published ? new Date().toISOString() : null;
       applyPublishedAtToCaches(optimisticPublishedAt);
-  
+
       return { prevList, prevPost };
     },
-  
+
     onError: (_err, _published, ctx) => {
       if (ctx?.prevList !== undefined) qc.setQueryData(qk.myPosts(), ctx.prevList);
       if (ctx?.prevPost !== undefined) qc.setQueryData(qk.post(id as string), ctx.prevPost);
       setError("Something went wrong.");
     },
-  
+
     onSuccess: (res) => {
       if (!res.ok) {
         setError(res.message ?? "Unable to update publish state.");
@@ -137,13 +135,12 @@ const postQuery = useQuery({
       }
       applyPublishedAtToCaches(res.post.publishedAt);
     },
-  
+
     onSettled: async () => {
       await qc.invalidateQueries({ queryKey: qk.myPosts() });
       await qc.invalidateQueries({ queryKey: qk.post(id as string) });
     },
   });
-  
 
   if (!id) {
     return (
@@ -214,16 +211,12 @@ const postQuery = useQuery({
 
       <div className="mt-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
-            Edit post
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Edit post</h1>
 
           <span
             className={[
               "rounded-full px-2.5 py-1 text-xs",
-              isPublished
-                ? "bg-emerald-500/15 text-emerald-200"
-                : "bg-white/10 text-white/70",
+              isPublished ? "bg-emerald-500/15 text-emerald-200" : "bg-white/10 text-white/70",
             ].join(" ")}
           >
             {isPublished ? "Published" : "Draft"}
@@ -231,11 +224,12 @@ const postQuery = useQuery({
 
           {isPublished && data.post.publishedAt ? (
             <p className="text-xs text-white/50">
-              Published {new Intl.DateTimeFormat("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "2-digit",
-            }).format(new Date(data.post.publishedAt))}
+              Published{" "}
+              {new Intl.DateTimeFormat("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+              }).format(new Date(data.post.publishedAt))}
             </p>
           ) : null}
         </div>
@@ -248,11 +242,7 @@ const postQuery = useQuery({
           disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
           className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
         >
-          {publishMutation.isPending
-            ? "Updating…"
-            : isPublished
-              ? "Unpublish"
-              : "Publish"}
+          {publishMutation.isPending ? "Updating…" : isPublished ? "Unpublish" : "Publish"}
         </button>
       </div>
 
@@ -295,11 +285,8 @@ const postQuery = useQuery({
               className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
               placeholder="e.g. bitcoin, hard-money, dev"
             />
-            <p className="mt-2 text-xs text-white/50">
-              Comma-separated list of tags.
-            </p>
+            <p className="mt-2 text-xs text-white/50">Comma-separated list of tags.</p>
           </div>
-
 
           <div>
             <label className="text-sm font-medium text-white">Content</label>
@@ -320,7 +307,9 @@ const postQuery = useQuery({
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
+              disabled={
+                deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending
+              }
               className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
             >
               {saveMutation.isPending ? "Saving…" : "Save & exit"}

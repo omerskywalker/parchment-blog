@@ -33,7 +33,7 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
     retry: false,
   });
 
-  const s = (stats.data && stats.data.ok ? (stats.data as StatsOk) : null);
+  const s = stats.data && stats.data.ok ? (stats.data as StatsOk) : null;
 
   // ---- animations: trigger only on value changes
   const [viewTick, setViewTick] = React.useState(0);
@@ -126,7 +126,7 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
       {/* views */}
       <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2.5 py-1 text-sm text-white/80">
         <span className="opacity-80">👁</span>
-        <span key={viewTick} className="tabular-nums pb-num">
+        <span key={viewTick} className="pb-num tabular-nums">
           {viewCount}
         </span>
       </div>
@@ -137,14 +137,14 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
         onClick={() => fireMut.mutate()}
         disabled={fireMut.isPending}
         className={[
-          "cursor-pointer inline-flex items-center gap-2 rounded-lg border px-2.5 py-1 text-sm transition-colors disabled:opacity-60",
+          "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1 text-sm transition-colors disabled:opacity-60",
           firedByMe
             ? "border-orange-500/30 bg-orange-500/15 text-orange-100"
             : "border-white/10 bg-black/30 text-white/80 hover:bg-black/40",
         ].join(" ")}
       >
         <span className={firedByMe ? "pb-pop" : ""}>🔥</span>
-        <span key={fireTick} className="tabular-nums pb-num">
+        <span key={fireTick} className="pb-num tabular-nums">
           {fireCount}
         </span>
       </button>

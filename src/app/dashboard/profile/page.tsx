@@ -10,7 +10,6 @@ import {
   presignAvatarUpload,
   uploadToS3PutUrl,
 } from "@/lib/api/profile";
-  
 
 export default function ProfilePage() {
   const qc = useQueryClient();
@@ -37,7 +36,8 @@ export default function ProfilePage() {
   }, [me.data?.ok]);
 
   const save = useMutation({
-    mutationFn: () => patchMyProfile({ username: username.trim(), bio, avatarKey: avatarKey ?? undefined }),
+    mutationFn: () =>
+      patchMyProfile({ username: username.trim(), bio, avatarKey: avatarKey ?? undefined }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-profile"] });
     },
@@ -107,42 +107,49 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex items-center gap-4 sm:flex-col sm:items-start">
               <div className="h-20 w-20 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : null}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : null}
               </div>
 
               <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]">
                 {uploadAvatar.isPending ? "Uploading…" : "Change avatar"}
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onPickFile} />
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={onPickFile}
+                />
               </label>
             </div>
 
             <div className="min-w-0 flex-1 space-y-4">
-                <div>
-                    <label className="text-sm text-white/60">Username</label>
-                    <input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="e.g. omerskywalker"
-                        className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
-                    />
+              <div>
+                <label className="text-sm text-white/60">Username</label>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. omerskywalker"
+                  className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
+                />
 
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
-                        <p className="text-xs text-white/40">
-                        Public URL: /u/{username.trim().toLowerCase() || "username"}
-                        </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <p className="text-xs text-white/40">
+                    Public URL: /u/{username.trim().toLowerCase() || "username"}
+                  </p>
 
-                        {username.trim() ? (
-                        <a
-                            href={`/u/${username.trim().toLowerCase()}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
-                        >
-                            View public profile <span className="text-white/40">↗</span>
-                        </a>
-                        ) : null}
-                    </div>
-            </div>
+                  {username.trim() ? (
+                    <a
+                      href={`/u/${username.trim().toLowerCase()}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                    >
+                      View public profile <span className="text-white/40">↗</span>
+                    </a>
+                  ) : null}
+                </div>
+              </div>
 
               <div>
                 <label className="text-sm text-white/60">Bio</label>
@@ -166,7 +173,9 @@ export default function ProfilePage() {
                   {save.isPending ? "Saving…" : "Save"}
                 </button>
 
-                {save.isError ? <p className="text-sm text-red-300">{(save.error as Error).message}</p> : null}
+                {save.isError ? (
+                  <p className="text-sm text-red-300">{(save.error as Error).message}</p>
+                ) : null}
                 {save.isSuccess ? <p className="text-sm text-emerald-200">Saved.</p> : null}
               </div>
 

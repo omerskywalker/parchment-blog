@@ -35,7 +35,7 @@ async function fetchPublicPage(args: { cursor: string | null; tag?: string }) {
   const data = (await res.json()) as ApiPage | ApiError;
 
   if (!res.ok || !data.ok) {
-    const message = data.ok ? "Request failed." : data.message ?? data.error;
+    const message = data.ok ? "Request failed." : (data.message ?? data.error);
     throw new Error(message);
   }
 
@@ -262,7 +262,7 @@ export default function PublicPostsFeed({
                 href={`/posts/${post.slug}`}
                 ref={register(post.id) as any}
                 className={[
-                  "block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:bg-black/50 hover:-translate-y-0.5 hover:border-white",
+                  "block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-black/50",
                   isNew ? "pb-fade-in" : "",
                 ].join(" ")}
                 style={

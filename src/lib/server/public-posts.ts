@@ -44,43 +44,42 @@ cached public feed (first page only)
 ============================================================ */
 
 export function getPublicPosts(args?: { tag?: string | null }) {
-const tag = args?.tag?.trim() || null;
+  const tag = args?.tag?.trim() || null;
 
-return unstable_cache(
- async (): Promise<PublicPostCard[]> => {
-   const rows = await prisma.post.findMany({
-     where: {
-       publishedAt: { not: null },
-       ...(tag ? { tags: { has: tag } } : {}),
-     },
-     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-     take: 10,
-     select: {
-       id: true,
-       title: true,
-       slug: true,
-       publishedAt: true,
-       updatedAt: true,
-       contentMd: true,
-       author: { select: { name: true, username: true, avatarKey: true } },
-       tags: true,
-     },
-   });
+  return unstable_cache(
+    async (): Promise<PublicPostCard[]> => {
+      const rows = await prisma.post.findMany({
+        where: {
+          publishedAt: { not: null },
+          ...(tag ? { tags: { has: tag } } : {}),
+        },
+        orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+        take: 10,
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          publishedAt: true,
+          updatedAt: true,
+          contentMd: true,
+          author: { select: { name: true, username: true, avatarKey: true } },
+          tags: true,
+        },
+      });
 
-   return rows.map(({ contentMd, ...p }) => ({
-     ...p,
-     readingTimeMin: estimateReadingTimeMinutes(contentMd),
-   }));
- },
- // cache key varies by tag (so each filtered feed is cacheable)
- ["public-posts", tag ?? "all"],
- {
-   revalidate: 60,
-   tags: ["public-posts"],
- },
-)();
+      return rows.map(({ contentMd, ...p }) => ({
+        ...p,
+        readingTimeMin: estimateReadingTimeMinutes(contentMd),
+      }));
+    },
+    // cache key varies by tag (so each filtered feed is cacheable)
+    ["public-posts", tag ?? "all"],
+    {
+      revalidate: 60,
+      tags: ["public-posts"],
+    },
+  )();
 }
-
 
 /* ============================================================
    cursor-based pagination (used by /api/public-posts)
@@ -113,7 +112,6 @@ export async function getPublicPostsPage(args: {
       tags: true,
     },
   });
-  
 
   const hasMore = rows.length > take;
   const page = hasMore ? rows.slice(0, take) : rows;

@@ -141,11 +141,8 @@ export default function NewPostPage() {
               className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
               placeholder="e.g. bitcoin, islam, dev"
             />
-            <p className="mt-2 text-xs text-white/50">
-              Comma-separated list of tags.
-            </p>
+            <p className="mt-2 text-xs text-white/50">Comma-separated list of tags.</p>
           </div>
-
 
           {/* error */}
           {formError ? (

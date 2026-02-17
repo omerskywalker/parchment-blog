@@ -16,7 +16,7 @@ export default async function PublicProfilePage({ params }: Props) {
       username: true,
       bio: true,
       avatarKey: true,
-  
+
       // published posts list
       posts: {
         where: { publishedAt: { not: null } },
@@ -31,7 +31,7 @@ export default async function PublicProfilePage({ params }: Props) {
           tags: true,
         },
       },
-  
+
       // count of published posts
       _count: {
         select: {
@@ -41,14 +41,14 @@ export default async function PublicProfilePage({ params }: Props) {
     },
   });
 
-// compute published-only stats (count + reads)
+  // compute published-only stats (count + reads)
   const stats = user
-  ? await prisma.post.aggregate({
-      where: { author: { username }, publishedAt: { not: null } },
-      _count: { _all: true },
-      _sum: { viewCount: true },
-  })
-  : null;
+    ? await prisma.post.aggregate({
+        where: { author: { username }, publishedAt: { not: null } },
+        _count: { _all: true },
+        _sum: { viewCount: true },
+      })
+    : null;
 
   const totalPosts = stats?._count?._all ?? 0;
   const totalReads = stats?._sum?.viewCount ?? 0;
@@ -87,25 +87,21 @@ export default async function PublicProfilePage({ params }: Props) {
           </div>
 
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
-              {displayName}
-            </h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">{displayName}</h1>
 
             <p className="mt-1 text-sm text-white/50">
               {user.username ? `@${user.username}` : null}
             </p>
 
-            {user.bio ? (
-              <p className="mt-3 text-sm text-white/75">{user.bio}</p>
-            ) : null}
+            {user.bio ? <p className="mt-3 text-sm text-white/75">{user.bio}</p> : null}
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/60">
-                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
-                    {totalPosts} posts
-                </span>
-                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
-                    {totalReads.toLocaleString()} reads
-                </span>
+              <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                {totalPosts} posts
+              </span>
+              <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                {totalReads.toLocaleString()} reads
+              </span>
             </div>
           </div>
         </div>
@@ -113,9 +109,7 @@ export default async function PublicProfilePage({ params }: Props) {
 
       {/* Posts section label + divider */}
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-medium tracking-wide text-white/60">
-          Posts
-        </h2>
+        <h2 className="text-sm font-medium tracking-wide text-white/60">Posts</h2>
         <div className="ml-4 h-px flex-1 bg-white/10" />
       </div>
 

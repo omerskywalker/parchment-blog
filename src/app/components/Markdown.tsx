@@ -71,10 +71,7 @@ export default function Markdown({ content }: Props) {
 
           th({ children, ...props }) {
             return (
-              <th
-                className="border border-white/10 bg-white/5 px-3 py-2 text-left"
-                {...props}
-              >
+              <th className="border border-white/10 bg-white/5 px-3 py-2 text-left" {...props}>
                 {children}
               </th>
             );
@@ -101,13 +98,8 @@ export default function Markdown({ content }: Props) {
           },
 
           // inline code vs fenced code
-          code({
-            className,
-            children,
-            ...props
-          }: React.ComponentPropsWithoutRef<"code">) {
-            const isFenced =
-              typeof className === "string" && className.includes("language-");
+          code({ className, children, ...props }: React.ComponentPropsWithoutRef<"code">) {
+            const isFenced = typeof className === "string" && className.includes("language-");
 
             if (!isFenced) {
               return (

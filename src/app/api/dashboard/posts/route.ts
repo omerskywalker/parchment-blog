@@ -7,7 +7,6 @@ import { getSession } from "@/lib/auth";
 import { createPostSchema, slugify } from "@/lib/validators/posts";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 
-
 function jsonError(status: number, error: string, message?: string, issues?: unknown) {
   return NextResponse.json({ ok: false as const, error, message, issues }, { status });
 }
@@ -26,7 +25,12 @@ export async function POST(req: Request) {
   const parsed = createPostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid input.",
+      z.treeifyError(parsed.error),
+    );
   }
 
   const { title, contentMd, slug: providedSlug, tags } = parsed.data;

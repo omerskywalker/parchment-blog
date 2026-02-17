@@ -17,7 +17,7 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
             animation: "pb-fade-in 420ms ease-out forwards",
             animationDelay: `${i * 70}ms`,
           }}
-          className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:bg-black/50 hover:border-white"
+          className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:border-white hover:bg-black/50"
         >
           <h3 className="text-base font-medium text-white">{p.title}</h3>
           <p className="mt-1 text-sm text-white/50">{p.author?.name ?? "Anonymous"}</p>

@@ -48,5 +48,9 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
     }
   });
 
-  return NextResponse.json({ ok: true as const, firedByMe: result.fired, fireCount: result.fireCount });
+  return NextResponse.json({
+    ok: true as const,
+    firedByMe: result.fired,
+    fireCount: result.fireCount,
+  });
 }

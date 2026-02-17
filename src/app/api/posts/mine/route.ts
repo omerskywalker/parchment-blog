@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 
-
 function jsonError(status: number, error: string, message?: string) {
   return NextResponse.json({ ok: false as const, error, message }, { status });
 }

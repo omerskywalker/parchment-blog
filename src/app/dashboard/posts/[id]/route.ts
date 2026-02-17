@@ -7,7 +7,6 @@ import { updatePostSchema } from "@/lib/validators/posts";
 import { getAuthedUserId } from "@/lib/server/auth";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 
-
 function jsonError(status: number, error: string, message?: string, issues?: unknown) {
   return NextResponse.json({ ok: false as const, error, message, issues }, { status });
 }
@@ -48,7 +47,12 @@ export async function PATCH(_req: Request, ctx: Ctx) {
   const parsed = updatePostSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(400, ERROR_CODES.VALIDATION_ERROR, "Invalid input.", z.treeifyError(parsed.error));
+    return jsonError(
+      400,
+      ERROR_CODES.VALIDATION_ERROR,
+      "Invalid input.",
+      z.treeifyError(parsed.error),
+    );
   }
 
   // ensure valid ownership

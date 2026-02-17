@@ -31,7 +31,10 @@ export default function Header() {
                 Dashboard
               </Link>
 
-              <Link href="/dashboard/profile" className="rounded-md px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)] hover:text-white">
+              <Link
+                href="/dashboard/profile"
+                className="rounded-md px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)] hover:text-white"
+              >
                 Profile
               </Link>
 
