@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicPostsPage } from "@/lib/server/public-posts";

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { getPublicPosts } from "@/lib/server/public-posts";
 import HomeLatestPosts from "./components/HomeLatestPosts";
