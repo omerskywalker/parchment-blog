@@ -49,3 +49,6 @@ prisma/dev.db-journal
 # docker
 .pgdata/
 
+
+# Sentry Config File
+.env.sentry-build-plugin
