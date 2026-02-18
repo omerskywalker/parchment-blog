@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           {children}
         </Providers>
+        <SpeedInsights />
       </body>
     </html>
   );
