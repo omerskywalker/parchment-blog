@@ -44,6 +44,7 @@ next-env.d.ts
 prisma/dev.db
 prisma/dev.db-journal
 /src/generated/prisma
+*_data.sql
 
 # docker
 .pgdata/
