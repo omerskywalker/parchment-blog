@@ -15,15 +15,13 @@ jobs:
           node-version: 20
           cache: "npm"
       - run: npm ci
-      
+
       - name: Build (PRs)
         if: github.event_name == 'pull_request'
         run: npm run build
         env:
           DATABASE_URL: "postgresql://user:pass@localhost:5432/db" # dummy
           DIRECT_URL: "postgresql://user:pass@localhost:5432/db"
-      
-
 
   migrate:
     if: github.ref == 'refs/heads/main'
