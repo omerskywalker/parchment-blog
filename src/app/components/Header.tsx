@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const navLink =
   "rounded-md px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)] hover:text-white";
@@ -9,6 +10,8 @@ const navLink =
 export default function Header() {
   const { data: session, status } = useSession();
   const user = session?.user;
+
+  const qc = useQueryClient();
 
   return (
     <header className="border-b border-white/10 bg-black/60 backdrop-blur">
@@ -38,7 +41,13 @@ export default function Header() {
                 Profile
               </Link>
 
-              <button onClick={() => signOut({ callbackUrl: "/" })} className={navLink}>
+              <button
+                className={navLink}
+                onClick={async () => {
+                  qc.clear();
+                  await signOut({ callbackUrl: "/" });
+                }}
+              >
                 Sign out
               </button>
             </>

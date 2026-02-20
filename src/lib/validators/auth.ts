@@ -1,15 +1,19 @@
 import { z } from "zod";
 
+const emailSchema = z.string().trim().max(255).pipe(z.email());
+
 export const RegisterSchema = z.object({
-  name: z
+  email: emailSchema,
+  password: z.string().min(10).max(200),
+  username: z
     .string()
     .trim()
-    .min(1)
-    .max(60)
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
-  email: z.email().trim().max(255),
-  password: z.string().min(10).max(200),
+    .min(3)
+    .max(30)
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      "Username can only contain letters, numbers, underscores, and hyphens",
+    ),
 });
 
 export type RegisterInput = z.infer<typeof RegisterSchema>;

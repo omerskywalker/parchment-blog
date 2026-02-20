@@ -22,7 +22,7 @@ type PageParam = string | null;
 type ApiPage = { ok: true; posts: ApiPost[]; nextCursor: string | null };
 type ApiError = { ok: false; error: string; message?: string };
 
-async function fetchPublicPage(args: { cursor: string | null; tag?: string }) {
+async function fetchPublicPage(args: { cursor: string | null; tag?: string }): Promise<ApiPage> {
   const params = new URLSearchParams();
   if (args.cursor) params.set("cursor", args.cursor);
   params.set("take", "10");
@@ -139,11 +139,10 @@ function useDirectVisitToPosts() {
   const [direct, setDirect] = React.useState(false);
 
   React.useEffect(() => {
-    const w = window as any;
-    if (!w.__pb_initial_path) {
-      w.__pb_initial_path = window.location.pathname + window.location.search;
+    if (!window.__pb_initial_path) {
+      window.__pb_initial_path = window.location.pathname + window.location.search;
     }
-    const initialPath: string = w.__pb_initial_path;
+    const initialPath = window.__pb_initial_path;
     setDirect(initialPath.startsWith("/posts"));
   }, []);
 
@@ -260,7 +259,6 @@ export default function PublicPostsFeed({
               <Link
                 key={post.id}
                 href={`/posts/${post.slug}`}
-                ref={register(post.id) as any}
                 className={[
                   "block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-black/50",
                   isNew ? "pb-fade-in" : "",
@@ -268,31 +266,33 @@ export default function PublicPostsFeed({
                 style={
                   isNew
                     ? ({
-                        ["--pb-delay" as any]: `${Math.min(i, 8) * 30}ms`,
+                        "--pb-delay": `${Math.min(i, 8) * 30}ms`,
                       } as React.CSSProperties)
                     : undefined
                 }
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-medium text-white">{post.title}</h2>
-                    <p className="mt-1 text-sm text-white/50">
-                      {post.author?.name ?? "Anonymous"}
-                      {" · "}
-                      {post.publishedAt
-                        ? new Intl.DateTimeFormat("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "2-digit",
-                          }).format(new Date(post.publishedAt))
-                        : "Unpublished"}
-                      {" · "}
-                      {post.readingTimeMin} min read
-                    </p>
+                <article ref={register(post.id)} className="contents">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-medium text-white">{post.title}</h2>
+                      <p className="mt-1 text-sm text-white/50">
+                        {post.author?.name ?? "Anonymous"}
+                        {" · "}
+                        {post.publishedAt
+                          ? new Intl.DateTimeFormat("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "2-digit",
+                            }).format(new Date(post.publishedAt))
+                          : "Unpublished"}
+                        {" · "}
+                        {post.readingTimeMin} min read
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <TagChips tags={post.tags} variant="feed" className="mt-2" />
+                  <TagChips tags={post.tags} variant="feed" className="mt-2" />
+                </article>
               </Link>
             );
           })}
