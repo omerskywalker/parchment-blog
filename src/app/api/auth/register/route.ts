@@ -5,6 +5,40 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { Prisma } from "@prisma/client";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 
+function normalizeUsername(raw: string) {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/_+/g, "_")
+    .slice(0, 30);
+}
+
+function prettyNameFromUsername(u: string) {
+  // hasan_khan -> hasan khan, hasan-khan -> hasan khan
+  const words = u.replace(/[_-]+/g, " ").trim().split(/\s+/).filter(Boolean);
+
+  const titled = words.map((w) => w.charAt(0).toLowerCase() + w.slice(1));
+  return titled.join(" ").slice(0, 60);
+}
+
+async function ensureUniqueUsername(base: string) {
+  const cleaned = normalizeUsername(base);
+  const seed = cleaned.length >= 3 ? cleaned : "user";
+
+  for (let i = 0; i < 50; i++) {
+    const candidate = i === 0 ? seed : `${seed}_${i + 1}`.slice(0, 30);
+    const exists = await prisma.user.findUnique({
+      where: { username: candidate },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+  }
+
+  return `${seed}_${crypto.randomUUID().slice(0, 6)}`.slice(0, 30);
+}
+
 export async function POST(req: Request) {
   let body: unknown;
 
@@ -21,27 +55,33 @@ export async function POST(req: Request) {
     });
   }
 
-  const { name, email, password } = parsed.data;
+  const { email, password, username } = parsed.data;
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // hash password (cost factor 10)
+  // normalize + uniquify username
+  const uniqueUsername = await ensureUniqueUsername(username);
+
+  // auto name from username
+  const name = prettyNameFromUsername(uniqueUsername);
+
   const passwordHash = await bcrypt.hash(password, 10);
 
   try {
     await prisma.user.create({
       data: {
         email: normalizedEmail,
-        name,
         passwordHash,
+        username: uniqueUsername,
+        name,
       },
     });
 
     return jsonOk({}, 201);
   } catch (err) {
-    // prisma unique constraint violation
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return jsonError("EMAIL_IN_USE", 409);
+      // could be email or username
+      return jsonError("CONFLICT", 409);
     }
 
     console.error(err);

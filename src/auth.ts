@@ -1,16 +1,11 @@
-// src/auth.ts
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { prisma } from "@/lib/db";
 
 export const authOptions: NextAuthOptions = {
-  pages: {
-    signIn: "/signin",
-  },
-  session: {
-    strategy: "jwt",
-  },
+  pages: { signIn: "/signin" },
+  session: { strategy: "jwt" },
   providers: [
     Credentials({
       name: "Credentials",
@@ -19,18 +14,40 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+        const email = credentials?.email?.toLowerCase().trim();
+        const password = credentials?.password;
 
-        const email = credentials.email.toLowerCase().trim();
+        if (!email || !password) return null;
 
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) return null;
+        if (!user?.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const isValid = await bcrypt.compare(password, user.passwordHash);
         if (!isValid) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          username: user.username,
+        };
       },
     }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.username = user.username ?? null;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.id as string) ?? session.user.id;
+        session.user.username = (token.username as string | null) ?? null;
+      }
+      return session;
+    },
+  },
 };

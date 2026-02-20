@@ -11,6 +11,8 @@ type Props = {
 };
 
 type StatsOk = { ok: true; viewCount: number; fireCount: number; firedByMe: boolean };
+type StatsErr = { ok: false; error: string; message?: string };
+type Stats = StatsOk | StatsErr;
 
 function qk(slug: string) {
   return ["post-stats", slug] as const;
@@ -19,66 +21,71 @@ function qk(slug: string) {
 export default function PostStatsBar({ slug, initialViewCount, initialFireCount }: Props) {
   const qc = useQueryClient();
 
-  // SSR baseline so no flash
-  const stats = useQuery({
+  const stats = useQuery<Stats>({
     queryKey: qk(slug),
-    queryFn: () => fetchPostStats(slug),
+    queryFn: async () => {
+      return (await fetchPostStats(slug)) as Stats;
+    },
     initialData: {
       ok: true as const,
       viewCount: initialViewCount,
       fireCount: initialFireCount,
-      firedByMe: false, // client will correct immediately via /stats
+      firedByMe: false,
     },
     staleTime: 10_000,
     retry: false,
   });
 
-  const s = stats.data && stats.data.ok ? (stats.data as StatsOk) : null;
+  const s = stats.data.ok ? stats.data : null;
 
-  // ---- animations: trigger only on value changes
   const [viewTick, setViewTick] = React.useState(0);
   const [fireTick, setFireTick] = React.useState(0);
 
   const prevView = React.useRef<number>(s?.viewCount ?? initialViewCount);
   const prevFire = React.useRef<number>(s?.fireCount ?? initialFireCount);
 
+  const viewCountVal = s?.viewCount;
+  const fireCountVal = s?.fireCount;
+
   React.useEffect(() => {
-    if (!s) return;
-    if (s.viewCount !== prevView.current) {
-      prevView.current = s.viewCount;
+    if (viewCountVal == null || fireCountVal == null) return;
+
+    if (viewCountVal !== prevView.current) {
+      prevView.current = viewCountVal;
       setViewTick((n) => n + 1);
     }
-    if (s.fireCount !== prevFire.current) {
-      prevFire.current = s.fireCount;
+
+    if (fireCountVal !== prevFire.current) {
+      prevFire.current = fireCountVal;
       setFireTick((n) => n + 1);
     }
-  }, [s?.viewCount, s?.fireCount]); // intentionally minimal
+  }, [viewCountVal, fireCountVal]);
 
-  // ---- record view (dedupe per tab)
   React.useEffect(() => {
     const key = `pb_viewed:${slug}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
 
     // optimistic + then sync
-    qc.setQueryData(qk(slug), (old: any) => {
-      if (!old?.ok) return old;
+    qc.setQueryData<Stats>(qk(slug), (old) => {
+      if (!old || !old.ok) return old;
       return { ...old, viewCount: (old.viewCount ?? initialViewCount) + 1 };
     });
 
     recordView(slug)
       .then((r) => {
-        if (r && (r as any).ok) {
-          qc.setQueryData(qk(slug), (old: any) => {
-            if (!old?.ok) return old;
-            return { ...old, viewCount: (r as any).viewCount };
+        const res = r as Stats;
+        if (res && res.ok) {
+          qc.setQueryData<Stats>(qk(slug), (old) => {
+            if (!old || !old.ok) return old;
+            return { ...old, viewCount: res.viewCount };
           });
         }
       })
       .catch(() => {
         // if request fails, roll back the optimistic increment
-        qc.setQueryData(qk(slug), (old: any) => {
-          if (!old?.ok) return old;
+        qc.setQueryData<Stats>(qk(slug), (old) => {
+          if (!old || !old.ok) return old;
           return { ...old, viewCount: Math.max(0, (old.viewCount ?? initialViewCount) - 1) };
         });
         sessionStorage.removeItem(key);
@@ -87,13 +94,13 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
 
   // ---- fire mutation with optimistic update + rollback
   const fireMut = useMutation({
-    mutationFn: () => toggleFire(slug),
+    mutationFn: async () => (await toggleFire(slug)) as Stats,
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: qk(slug) });
-      const prev = qc.getQueryData(qk(slug));
+      const prev = qc.getQueryData<Stats>(qk(slug));
 
-      qc.setQueryData(qk(slug), (old: any) => {
-        if (!old?.ok) return old;
+      qc.setQueryData<Stats>(qk(slug), (old) => {
+        if (!old || !old.ok) return old;
         const nextFired = !old.firedByMe;
         const nextCount = (old.fireCount ?? initialFireCount) + (nextFired ? 1 : -1);
         return { ...old, firedByMe: nextFired, fireCount: Math.max(0, nextCount) };
@@ -102,13 +109,13 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(qk(slug), ctx.prev);
+      if (ctx?.prev) qc.setQueryData<Stats>(qk(slug), ctx.prev);
     },
     onSuccess: (data) => {
-      if (data && (data as any).ok) {
-        qc.setQueryData(qk(slug), (old: any) => {
-          if (!old?.ok) return old;
-          return { ...old, firedByMe: (data as any).firedByMe, fireCount: (data as any).fireCount };
+      if (data && data.ok) {
+        qc.setQueryData<Stats>(qk(slug), (old) => {
+          if (!old || !old.ok) return old;
+          return { ...old, firedByMe: data.firedByMe, fireCount: data.fireCount };
         });
       }
     },

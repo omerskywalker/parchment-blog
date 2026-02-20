@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { s3PublicUrlFromKey } from "@/lib/s3";
+import { useSearchParams } from "next/navigation";
 
 import {
   fetchMyProfile,
@@ -12,7 +13,15 @@ import {
 } from "@/lib/api/profile";
 
 export default function ProfilePage() {
+  const sp = useSearchParams();
+  const welcome = sp.get("welcome") === "1";
   const qc = useQueryClient();
+
+  const [showWelcome, setShowWelcome] = React.useState(welcome);
+
+  React.useEffect(() => {
+    setShowWelcome(welcome);
+  }, [welcome]);
 
   const me = useQuery({
     queryKey: ["me-profile"],
@@ -96,6 +105,25 @@ export default function ProfilePage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
+      {showWelcome && (
+        <div className="mx-auto mb-4 max-w-3xl rounded-2xl border border-white/10 bg-black/40 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-medium text-white">Welcome to Parchment 👋</p>
+              <p className="mt-1 text-sm text-white/60">
+                Set your avatar + bio so your posts look great.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWelcome(false)}
+              className="rounded-md border border-white/15 bg-white/10 px-3 py-1 text-sm text-white/80 hover:bg-white/15"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-white">Profile</h1>
       </div>
