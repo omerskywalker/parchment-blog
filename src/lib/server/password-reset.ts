@@ -1,0 +1,10 @@
+import crypto from "crypto";
+
+export function makeResetToken() {
+  // 32 bytes => 64 hex chars
+  return crypto.randomBytes(32).toString("hex");
+}
+
+export function hashToken(raw: string) {
+  return crypto.createHash("sha256").update(raw).digest("hex");
+}

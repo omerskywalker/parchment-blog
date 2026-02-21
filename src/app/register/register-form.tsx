@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { OAuthButtons } from "../components/auth/oauth-buttons";
 
 type ApiOk = { ok: true };
 type ApiErr = { ok: false; error: string; message?: string; issues?: unknown };
@@ -13,6 +14,8 @@ type ApiResponse = ApiOk | ApiErr;
 export default function RegisterForm({ next }: { next: string }) {
   const router = useRouter();
   const qc = useQueryClient();
+
+  const callbackUrl = next || "/dashboard";
 
   const [username, setUsername] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -101,7 +104,9 @@ export default function RegisterForm({ next }: { next: string }) {
         <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
         <p className="mt-1 text-sm text-[rgb(var(--muted))]">Register to start posting.</p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <OAuthButtons callbackUrl={callbackUrl} />
+
+        <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div>
             <label className="text-sm font-medium">Username</label>
             <input
