@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { jsonOk, jsonError } from "@/lib/http";
 import { ERROR_CODES } from "@/lib/server/error-codes";
-import { resend, appUrl, fromEmail } from "@/lib/email/resend";
+import { getResend, appUrl, fromEmail } from "@/lib/email/resend";
 import { makeResetToken, hashToken } from "@/lib/server/password-reset";
 import { z } from "zod";
 
@@ -45,7 +45,14 @@ export async function POST(req: Request) {
   });
 
   const url = `${appUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
-  console.log(url); // for dev -- remove in production
+
+  const resend = getResend();
+
+  // CI won't fail build
+  if (!resend) {
+    console.warn("[forgot-password] RESEND_API_KEY missing. Reset link (dev only):", url);
+    return okResponse();
+  }
 
   await resend.emails.send({
     from: fromEmail(),
