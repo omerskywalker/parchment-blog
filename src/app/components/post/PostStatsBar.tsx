@@ -8,6 +8,9 @@ type Props = {
   slug: string;
   initialViewCount: number;
   initialFireCount: number;
+  showViews?: boolean;
+  className?: string;
+  size?: "sm" | "md";
 };
 
 type StatsOk = { ok: true; viewCount: number; fireCount: number; firedByMe: boolean };
@@ -18,7 +21,14 @@ function qk(slug: string) {
   return ["post-stats", slug] as const;
 }
 
-export default function PostStatsBar({ slug, initialViewCount, initialFireCount }: Props) {
+export default function PostStatsBar({
+  slug,
+  initialViewCount,
+  initialFireCount,
+  showViews = true,
+  className,
+  size = "md",
+}: Props) {
   const qc = useQueryClient();
 
   const stats = useQuery<Stats>({
@@ -66,7 +76,6 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
 
-    // optimistic + then sync
     qc.setQueryData<Stats>(qk(slug), (old) => {
       if (!old || !old.ok) return old;
       return { ...old, viewCount: (old.viewCount ?? initialViewCount) + 1 };
@@ -83,7 +92,6 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
         }
       })
       .catch(() => {
-        // if request fails, roll back the optimistic increment
         qc.setQueryData<Stats>(qk(slug), (old) => {
           if (!old || !old.ok) return old;
           return { ...old, viewCount: Math.max(0, (old.viewCount ?? initialViewCount) - 1) };
@@ -92,7 +100,6 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
       });
   }, [slug, qc, initialViewCount]);
 
-  // ---- fire mutation with optimistic update + rollback
   const fireMut = useMutation({
     mutationFn: async () => (await toggleFire(slug)) as Stats,
     onMutate: async () => {
@@ -128,23 +135,29 @@ export default function PostStatsBar({ slug, initialViewCount, initialFireCount 
   const fireCount = s?.fireCount ?? initialFireCount;
   const firedByMe = s?.firedByMe ?? false;
 
-  return (
-    <div className="mt-4 flex items-center gap-2">
-      {/* views */}
-      <div className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 px-2.5 py-1 text-sm text-white/80">
-        <span className="opacity-80">👁</span>
-        <span key={viewTick} className="pb-num tabular-nums">
-          {viewCount}
-        </span>
-      </div>
+  const heightClass = size === "sm" ? "h-10" : "h-9";
+  const basePill =
+    `${heightClass} inline-flex items-center gap-2 rounded-lg border px-3 text-sm ` +
+    `transition-colors disabled:opacity-60`;
 
-      {/* fire */}
+  return (
+    <div className={["flex items-center gap-2", className ?? ""].join(" ")}>
+      {showViews && (
+        <div className={[basePill, "border-white/10 bg-black/30 text-white/80"].join(" ")}>
+          <span className="opacity-80">👁</span>
+          <span key={viewTick} className="pb-num tabular-nums">
+            {viewCount}
+          </span>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => fireMut.mutate()}
         disabled={fireMut.isPending}
         className={[
-          "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1 text-sm transition-colors disabled:opacity-60",
+          basePill,
+          "cursor-pointer",
           firedByMe
             ? "border-orange-500/30 bg-orange-500/15 text-orange-100"
             : "border-white/10 bg-black/30 text-white/80 hover:bg-black/40",
