@@ -36,7 +36,7 @@ export function TagChips({
   const chipClass = cx(baseChip, chipByVariant);
 
   return (
-    <span className={cx("mt-3 flex flex-wrap gap-2", className)}>
+    <span className={cx("mt-1 flex flex-wrap gap-2", className)}>
       {list.map((t) =>
         isClickable ? (
           <Link key={t} href={`${hrefPrefix}${encodeURIComponent(t)}`} className={chipClass}>
