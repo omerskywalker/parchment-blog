@@ -51,14 +51,22 @@ export default async function PublicPostDetailPage({ params }: Props) {
       </div>
 
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-        {/* title + share (desktop) */}
+        {/* title + actions cluster (desktop) */}
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             {post.title}
           </h1>
 
-          {/* desktop share buttons live here */}
-          <div className="hidden shrink-0 sm:block">
+          {/* Desktop cluster: Fire + Copy + Share */}
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            <PostStatsBar
+              slug={post.slug}
+              initialViewCount={post.viewCount}
+              initialFireCount={post.fireCount}
+              showViews={false}
+              size="md"
+              stretch={false}
+            />
             <PostShareActions title={post.title} size="md" />
           </div>
         </div>
@@ -114,37 +122,26 @@ export default async function PublicPostDetailPage({ params }: Props) {
           <PostViewsInline slug={post.slug} initialViewCount={post.viewCount} />
         </p>
 
-        {/* tags + actions */}
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* tags + mobile actions */}
+        <div className="mt-4 flex flex-col gap-3">
           <TagChips tags={post.tags} variant="detail" />
 
-          {/* Mobile action band: fire + copy + share */}
-          <div className="flex items-center gap-2 sm:hidden">
+          {/* Mobile: 3-column equal width row (Fire | Copy | Share) */}
+          <div className="grid grid-cols-3 gap-2 sm:hidden">
             <PostStatsBar
               slug={post.slug}
               initialViewCount={post.viewCount}
               initialFireCount={post.fireCount}
               showViews={false}
-              className="mt-0"
               size="sm"
+              stretch
+              className="w-full"
             />
-            <PostShareActions title={post.title} size="sm" />
-          </div>
-
-          {/* Desktop: keep Fire as a clear action pill, share stays top-right */}
-          <div className="hidden items-center gap-2 sm:flex">
-            <PostStatsBar
-              slug={post.slug}
-              initialViewCount={post.viewCount}
-              initialFireCount={post.fireCount}
-              showViews={false}
-              className="mt-0"
-              size="md"
-            />
+            <PostShareActions title={post.title} size="sm" layout="grid" className="col-span-2" />
           </div>
         </div>
 
-        {/* divider before content (micro polish) */}
+        {/* divider before content */}
         <div className="mt-6 border-t border-white/5 pt-6">
           <div className="prose prose-invert max-w-none leading-relaxed">
             <Markdown content={post.contentMd} />
