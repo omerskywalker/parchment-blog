@@ -6,13 +6,14 @@ type Props = {
   title: string;
   className?: string;
   size?: "sm" | "md";
+  layout?: "inline" | "grid"; // grid for mobile equal-width layout
 };
 
 function cx(...parts: Array<string | undefined | false | null>) {
   return parts.filter(Boolean).join(" ");
 }
 
-export function PostShareActions({ title, className, size = "md" }: Props) {
+export function PostShareActions({ title, className, size = "md", layout = "inline" }: Props) {
   const [copied, setCopied] = React.useState(false);
 
   async function copyLink() {
@@ -23,6 +24,7 @@ export function PostShareActions({ title, className, size = "md" }: Props) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
     } catch {
+      // fallback
       const ta = document.createElement("textarea");
       ta.value = url;
       document.body.appendChild(ta);
@@ -50,8 +52,8 @@ export function PostShareActions({ title, className, size = "md" }: Props) {
     await copyLink();
   }
 
-  // unify sizes to feel like one system
   const heightClass = "h-10";
+
   const baseBtn =
     `${heightClass} inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 ` +
     `bg-black/30 px-4 text-sm text-white/85 ` +
@@ -59,35 +61,34 @@ export function PostShareActions({ title, className, size = "md" }: Props) {
     `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] active:translate-y-0 ` +
     `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20`;
 
-  // No-jump: keep label stable and show a badge overlay
-  const copyMinW = size === "sm" ? "min-w-[132px]" : "min-w-[140px]";
+  // Desktop: natural widths, but keep Copy comfortably sized.
+  // Mobile grid: full width.
+  const copyWidth =
+    layout === "grid" ? "w-full" : size === "sm" ? "min-w-[104px]" : "min-w-[112px]";
+
+  const wrapperClass =
+    layout === "grid" ? "grid grid-cols-2 gap-2 w-full" : "flex flex-wrap items-center gap-2";
 
   return (
-    <div className={cx("flex items-center gap-2", className)}>
-      <button type="button" onClick={copyLink} className={cx(baseBtn, copyMinW)}>
-        <span aria-hidden="true" className="opacity-90">
-          ⛓
+    <div className={cx(wrapperClass, className)}>
+      <button type="button" onClick={copyLink} className={cx(baseBtn, copyWidth)}>
+        <span
+          aria-hidden="true"
+          className={cx(
+            "inline-flex w-4 justify-center transition-transform duration-200",
+            copied ? "scale-110" : "",
+          )}
+        >
+          {copied ? "✓" : "⛓"}
         </span>
-
-        <span className="relative">
-          <span>Copy link</span>
-
-          {/* badge */}
-          <span
-            className={cx(
-              "pointer-events-none absolute top-1/2 -right-12 -translate-y-1/2",
-              "rounded-md border border-white/10 bg-black/60 px-2 py-0.5 text-[11px] text-white/80",
-              "transition-all duration-200",
-              copied ? "translate-x-0 opacity-100" : "translate-x-1 opacity-0",
-            )}
-            aria-hidden="true"
-          >
-            Copied
-          </span>
-        </span>
+        <span>Copy</span>
       </button>
 
-      <button type="button" onClick={share} className={cx(baseBtn)}>
+      <button
+        type="button"
+        onClick={share}
+        className={cx(baseBtn, layout === "grid" ? "w-full" : "")}
+      >
         <span aria-hidden="true" className="opacity-90">
           ↗
         </span>

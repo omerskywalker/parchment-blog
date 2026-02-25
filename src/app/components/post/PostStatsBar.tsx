@@ -11,6 +11,7 @@ type Props = {
   showViews?: boolean;
   className?: string;
   size?: "sm" | "md";
+  stretch?: boolean; // when true, button becomes w-full + centered (mobile grid)
 };
 
 type StatsOk = { ok: true; viewCount: number; fireCount: number; firedByMe: boolean };
@@ -32,6 +33,7 @@ export default function PostStatsBar({
   showViews = true,
   className,
   size = "md",
+  stretch = false,
 }: Props) {
   const qc = useQueryClient();
 
@@ -52,28 +54,17 @@ export default function PostStatsBar({
 
   const s = stats.data.ok ? stats.data : null;
 
-  const [viewTick, setViewTick] = React.useState(0);
   const [fireTick, setFireTick] = React.useState(0);
-
-  const prevView = React.useRef<number>(s?.viewCount ?? initialViewCount);
   const prevFire = React.useRef<number>(s?.fireCount ?? initialFireCount);
-
-  const viewCountVal = s?.viewCount;
   const fireCountVal = s?.fireCount;
 
   React.useEffect(() => {
-    if (viewCountVal == null || fireCountVal == null) return;
-
-    if (viewCountVal !== prevView.current) {
-      prevView.current = viewCountVal;
-      setViewTick((n) => n + 1);
-    }
-
+    if (fireCountVal == null) return;
     if (fireCountVal !== prevFire.current) {
       prevFire.current = fireCountVal;
       setFireTick((n) => n + 1);
     }
-  }, [viewCountVal, fireCountVal]);
+  }, [fireCountVal]);
 
   // view increment (optimistic + session guard)
   React.useEffect(() => {
@@ -136,12 +127,11 @@ export default function PostStatsBar({
     },
   });
 
-  const viewCount = s?.viewCount ?? initialViewCount;
   const fireCount = s?.fireCount ?? initialFireCount;
   const firedByMe = s?.firedByMe ?? false;
 
-  // Unify on h-10 everywhere (product feel)
   const heightClass = "h-10";
+
   const baseBtn =
     `${heightClass} inline-flex items-center gap-2 rounded-xl border px-4 text-sm ` +
     `transition-[transform,background-color,border-color,box-shadow] duration-200 ` +
@@ -153,52 +143,32 @@ export default function PostStatsBar({
     "border-white/10 bg-black/30 text-white/80 hover:bg-black/45 hover:border-white/25";
 
   const fired =
-    "border-orange-500/35 bg-orange-500/15 text-orange-100 " +
-    "shadow-[0_0_14px_rgba(249,115,22,0.20)]";
+    "border-orange-500/35 bg-orange-500/15 text-orange-100 shadow-[0_0_14px_rgba(249,115,22,0.20)]";
 
-  // tiny count change anim: scale + fade in
-  const countAnim = "transition-transform duration-200 will-change-transform";
   const bump = "animate-[pb_bump_220ms_ease-out]";
 
   return (
-    <div className={cx("flex items-center gap-2", className)}>
-      {showViews && (
-        <div className={cx(baseBtn, neutral)}>
-          <span className="opacity-80">👁</span>
-          <span
-            key={viewTick}
-            className={cx("tabular-nums", countAnim, bump)}
-            aria-label={`${viewCount} views`}
-          >
-            {viewCount}
-          </span>
-        </div>
-      )}
-
+    <div className={cx(stretch ? "w-full" : "", className)}>
       <button
         type="button"
         onClick={() => fireMut.mutate()}
         disabled={fireMut.isPending}
-        className={cx(baseBtn, "cursor-pointer", firedByMe ? fired : neutral)}
+        className={cx(
+          baseBtn,
+          "cursor-pointer",
+          stretch ? "w-full justify-center" : "",
+          firedByMe ? fired : neutral,
+        )}
         aria-pressed={firedByMe}
-        aria-label={firedByMe ? "Remove fire reaction" : "Add fire reaction"}
       >
-        <span
-          className={cx("transition-transform duration-200", firedByMe ? "scale-[1.06]" : "")}
-          aria-hidden="true"
-        >
+        <span className={cx("transition-transform duration-200", firedByMe ? "scale-[1.06]" : "")}>
           🔥
         </span>
-        <span
-          key={fireTick}
-          className={cx("tabular-nums", countAnim, bump)}
-          aria-label={`${fireCount} fires`}
-        >
+        <span key={fireTick} className={cx("tabular-nums", bump)}>
           {fireCount}
         </span>
       </button>
 
-      {/* local keyframes (Tailwind arbitrary animate uses this name) */}
       <style jsx global>{`
         @keyframes pb_bump {
           0% {
