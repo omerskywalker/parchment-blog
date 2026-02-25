@@ -21,6 +21,10 @@ function qk(slug: string) {
   return ["post-stats", slug] as const;
 }
 
+function cx(...parts: Array<string | undefined | false | null>) {
+  return parts.filter(Boolean).join(" ");
+}
+
 export default function PostStatsBar({
   slug,
   initialViewCount,
@@ -71,6 +75,7 @@ export default function PostStatsBar({
     }
   }, [viewCountVal, fireCountVal]);
 
+  // view increment (optimistic + session guard)
   React.useEffect(() => {
     const key = `pb_viewed:${slug}`;
     if (sessionStorage.getItem(key)) return;
@@ -135,17 +140,36 @@ export default function PostStatsBar({
   const fireCount = s?.fireCount ?? initialFireCount;
   const firedByMe = s?.firedByMe ?? false;
 
-  const heightClass = size === "sm" ? "h-10" : "h-9";
-  const basePill =
-    `${heightClass} inline-flex items-center gap-2 rounded-lg border px-3 text-sm ` +
-    `transition-colors disabled:opacity-60`;
+  // Unify on h-10 everywhere (product feel)
+  const heightClass = "h-10";
+  const baseBtn =
+    `${heightClass} inline-flex items-center gap-2 rounded-xl border px-4 text-sm ` +
+    `transition-[transform,background-color,border-color,box-shadow] duration-200 ` +
+    `hover:-translate-y-[1px] active:translate-y-0 ` +
+    `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ` +
+    `disabled:opacity-60 disabled:hover:translate-y-0`;
+
+  const neutral =
+    "border-white/10 bg-black/30 text-white/80 hover:bg-black/45 hover:border-white/25";
+
+  const fired =
+    "border-orange-500/35 bg-orange-500/15 text-orange-100 " +
+    "shadow-[0_0_14px_rgba(249,115,22,0.20)]";
+
+  // tiny count change anim: scale + fade in
+  const countAnim = "transition-transform duration-200 will-change-transform";
+  const bump = "animate-[pb_bump_220ms_ease-out]";
 
   return (
-    <div className={["flex items-center gap-2", className ?? ""].join(" ")}>
+    <div className={cx("flex items-center gap-2", className)}>
       {showViews && (
-        <div className={[basePill, "border-white/10 bg-black/30 text-white/80"].join(" ")}>
+        <div className={cx(baseBtn, neutral)}>
           <span className="opacity-80">👁</span>
-          <span key={viewTick} className="pb-num tabular-nums">
+          <span
+            key={viewTick}
+            className={cx("tabular-nums", countAnim, bump)}
+            aria-label={`${viewCount} views`}
+          >
             {viewCount}
           </span>
         </div>
@@ -155,19 +179,38 @@ export default function PostStatsBar({
         type="button"
         onClick={() => fireMut.mutate()}
         disabled={fireMut.isPending}
-        className={[
-          basePill,
-          "cursor-pointer",
-          firedByMe
-            ? "border-orange-500/30 bg-orange-500/15 text-orange-100"
-            : "border-white/10 bg-black/30 text-white/80 hover:bg-black/40",
-        ].join(" ")}
+        className={cx(baseBtn, "cursor-pointer", firedByMe ? fired : neutral)}
+        aria-pressed={firedByMe}
+        aria-label={firedByMe ? "Remove fire reaction" : "Add fire reaction"}
       >
-        <span className={firedByMe ? "pb-pop" : ""}>🔥</span>
-        <span key={fireTick} className="pb-num tabular-nums">
+        <span
+          className={cx("transition-transform duration-200", firedByMe ? "scale-[1.06]" : "")}
+          aria-hidden="true"
+        >
+          🔥
+        </span>
+        <span
+          key={fireTick}
+          className={cx("tabular-nums", countAnim, bump)}
+          aria-label={`${fireCount} fires`}
+        >
           {fireCount}
         </span>
       </button>
+
+      {/* local keyframes (Tailwind arbitrary animate uses this name) */}
+      <style jsx global>{`
+        @keyframes pb_bump {
+          0% {
+            transform: scale(0.96);
+            opacity: 0.75;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
