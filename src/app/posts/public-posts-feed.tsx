@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import type { PublicPostCard } from "../../lib/server/public-posts";
 import { TagChips } from "../components/TagChips";
+import { s3PublicUrlFromKey } from "@/lib/s3";
 
 type ApiPost = {
   id: string;
@@ -12,8 +13,9 @@ type ApiPost = {
   slug: string;
   publishedAt: string | null;
   updatedAt: string;
-  author: { name: string | null };
+  author: { name: string | null; avatarKey?: string | null };
   readingTimeMin: number;
+  viewCount: number;
   tags: string[];
 };
 
@@ -189,6 +191,7 @@ export default function PublicPostsFeed({
             updatedAt: new Date(p.updatedAt).toISOString(),
             author: p.author,
             readingTimeMin: p.readingTimeMin,
+            viewCount: p.viewCount ?? 0,
             tags: p.tags,
           })),
           nextCursor: initialCursor,
@@ -273,21 +276,47 @@ export default function PublicPostsFeed({
               >
                 <article ref={register(post.id)} className="contents">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-medium text-white">{post.title}</h2>
-                      <p className="mt-1 text-sm text-white/50">
-                        {post.author?.name ?? "Anonymous"}
-                        {" · "}
-                        {post.publishedAt
-                          ? new Intl.DateTimeFormat("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "2-digit",
-                            }).format(new Date(post.publishedAt))
-                          : "Unpublished"}
-                        {" · "}
-                        {post.readingTimeMin} min read
-                      </p>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-lg font-medium text-white">{post.title}</h2>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+                        <span className="inline-flex items-center gap-2 text-white/70">
+                          {post.author?.avatarKey ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
+                              alt=""
+                              className="h-5 w-5 rounded-full border border-white/10 object-cover"
+                            />
+                          ) : (
+                            <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+                          )}
+                          <span className="truncate">{post.author?.name ?? "Anonymous"}</span>
+                        </span>
+
+                        <span className="text-white/20">·</span>
+
+                        <span>
+                          {post.publishedAt
+                            ? new Intl.DateTimeFormat("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "2-digit",
+                              }).format(new Date(post.publishedAt))
+                            : "Unpublished"}
+                        </span>
+
+                        <span className="text-white/20">·</span>
+
+                        <span>{post.readingTimeMin} min read</span>
+
+                        <span className="text-white/20">·</span>
+
+                        <span className="inline-flex items-center gap-1">
+                          <span className="opacity-70">👁</span>
+                          <span className="tabular-nums">{post.viewCount ?? 0}</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
 
