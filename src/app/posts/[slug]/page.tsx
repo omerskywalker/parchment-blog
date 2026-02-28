@@ -1,3 +1,4 @@
+// src/app/posts/[slug]/page.tsx
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
@@ -16,19 +17,28 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPublicPostBySlug(slug);
 
+  const post = await getPublicPostBySlug(slug);
   if (!post) return { title: "Post not found" };
+
+  const ogUrl = `/posts/${post.slug}/opengraph-image`;
 
   return {
     title: post.title,
     alternates: { canonical: `/posts/${post.slug}` },
+    openGraph: {
+      title: post.title,
+      type: "article",
+      url: `/posts/${post.slug}`,
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      images: [ogUrl],
+    },
   };
 }
 
@@ -61,8 +71,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <PostStatsBar
               slug={post.slug}
-              initialViewCount={post.viewCount}
-              initialFireCount={post.fireCount}
+              initialViewCount={post.viewCount ?? 0}
+              initialFireCount={post.fireCount ?? 0}
               showViews={false}
               size="md"
               stretch={false}
@@ -115,23 +125,23 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
           <span className="text-white/20">·</span>
 
-          <span>{post.readingTimeMin} min read</span>
+          <span>{post.readingTimeMin ?? 1} min read</span>
 
           <span className="text-white/20">·</span>
 
-          <PostViewsInline slug={post.slug} initialViewCount={post.viewCount} />
+          <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
         </p>
 
         {/* tags + mobile actions */}
         <div className="mt-4 flex flex-col gap-3">
-          <TagChips tags={post.tags} variant="detail" />
+          <TagChips tags={post.tags ?? []} variant="detail" />
 
           {/* Mobile: 3-column equal width row (Fire | Copy | Share) */}
           <div className="grid grid-cols-3 gap-2 sm:hidden">
             <PostStatsBar
               slug={post.slug}
-              initialViewCount={post.viewCount}
-              initialFireCount={post.fireCount}
+              initialViewCount={post.viewCount ?? 0}
+              initialFireCount={post.fireCount ?? 0}
               showViews={false}
               size="sm"
               stretch
