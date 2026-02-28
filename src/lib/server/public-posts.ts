@@ -6,15 +6,22 @@ import { estimateReadingTimeMinutes } from "@/lib/server/reading-time";
    types
 ============================================================ */
 
+export type PublicPostAuthor = {
+  name: string | null;
+  username: string | null;
+  avatarKey: string | null;
+};
+
 export type PublicPostCard = {
   id: string;
   title: string;
   slug: string;
   publishedAt: Date | null;
   updatedAt: Date;
-  author: { name: string | null; username: string | null; avatarKey: string | null };
+  author: PublicPostAuthor;
   readingTimeMin: number;
   tags: string[];
+  viewCount: number; // ✅ add views to cards
 };
 
 export type PublicPostDetail = {
@@ -24,7 +31,7 @@ export type PublicPostDetail = {
   contentMd: string;
   publishedAt: Date | null;
   updatedAt: Date;
-  author: { name: string | null; username: string | null; avatarKey: string | null };
+  author: PublicPostAuthor;
   readingTimeMin: number;
   tags: string[];
 
@@ -62,6 +69,7 @@ export function getPublicPosts(args?: { tag?: string | null }) {
           publishedAt: true,
           updatedAt: true,
           contentMd: true,
+          viewCount: true, // ✅
           author: { select: { name: true, username: true, avatarKey: true } },
           tags: true,
         },
@@ -72,7 +80,6 @@ export function getPublicPosts(args?: { tag?: string | null }) {
         readingTimeMin: estimateReadingTimeMinutes(contentMd),
       }));
     },
-    // cache key varies by tag (so each filtered feed is cacheable)
     ["public-posts", tag ?? "all"],
     {
       revalidate: 60,
@@ -108,6 +115,7 @@ export async function getPublicPostsPage(args: {
       publishedAt: true,
       updatedAt: true,
       contentMd: true,
+      viewCount: true, // ✅
       author: { select: { name: true, username: true, avatarKey: true } },
       tags: true,
     },
