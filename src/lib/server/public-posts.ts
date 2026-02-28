@@ -16,12 +16,12 @@ export type PublicPostCard = {
   id: string;
   title: string;
   slug: string;
-  publishedAt: Date | null;
-  updatedAt: Date;
-  author: PublicPostAuthor;
+  publishedAt: string | null;
+  updatedAt: string;
+  author: { name: string | null; username: string | null; avatarKey: string | null };
   readingTimeMin: number;
   tags: string[];
-  viewCount: number; // ✅ add views to cards
+  viewCount: number;
 };
 
 export type PublicPostDetail = {
@@ -29,12 +29,11 @@ export type PublicPostDetail = {
   title: string;
   slug: string;
   contentMd: string;
-  publishedAt: Date | null;
-  updatedAt: Date;
+  publishedAt: string | null;
+  updatedAt: string;
   author: PublicPostAuthor;
   readingTimeMin: number;
   tags: string[];
-
   viewCount: number;
   fireCount: number;
 };
@@ -77,7 +76,10 @@ export function getPublicPosts(args?: { tag?: string | null }) {
 
       return rows.map(({ contentMd, ...p }) => ({
         ...p,
+        publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+        updatedAt: p.updatedAt.toISOString(),
         readingTimeMin: estimateReadingTimeMinutes(contentMd),
+        viewCount: p.viewCount ?? 0,
       }));
     },
     ["public-posts", tag ?? "all"],
@@ -127,7 +129,10 @@ export async function getPublicPostsPage(args: {
   return {
     posts: page.map(({ contentMd, ...p }) => ({
       ...p,
+      publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+      updatedAt: p.updatedAt.toISOString(),
       readingTimeMin: estimateReadingTimeMinutes(contentMd),
+      viewCount: p.viewCount ?? 0,
     })),
     nextCursor: hasMore ? page[page.length - 1]!.id : null,
   };
@@ -151,7 +156,6 @@ export function getPublicPostBySlug(slug: string) {
           updatedAt: true,
           author: { select: { name: true, username: true, avatarKey: true } },
           tags: true,
-
           viewCount: true,
           fireCount: true,
         },
@@ -161,7 +165,11 @@ export function getPublicPostBySlug(slug: string) {
 
       return {
         ...post,
+        publishedAt: post.publishedAt ? post.publishedAt.toISOString() : null,
+        updatedAt: post.updatedAt.toISOString(),
         readingTimeMin: estimateReadingTimeMinutes(post.contentMd),
+        viewCount: post.viewCount ?? 0,
+        fireCount: post.fireCount ?? 0,
       };
     },
     ["public-post", slug],

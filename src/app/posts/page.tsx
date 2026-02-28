@@ -2,152 +2,60 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { getPublicPostsPage } from "@/lib/server/public-posts";
+import PublicPostsFeed from "./public-posts-feed";
+import { unstable_noStore as noStore } from "next/cache";
 
-import { getPublicPostBySlug } from "@/lib/server/public-posts";
-import PostStatsBar from "@/app/components/post/PostStatsBar";
-import Markdown from "@/app/components/Markdown";
-import { TagChips } from "@app/components/TagChips";
-import { PostShareActions } from "@app/components/post/PostShareActions";
-import { s3PublicUrlFromKey } from "@/lib/s3";
-import PostViewsInline from "@app/components/post/PostViewsInline";
-
-type Props = {
-  params: Promise<{ slug: string }>;
+export const metadata: Metadata = {
+  title: "Posts",
+  alternates: { canonical: "/posts" },
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const post = await getPublicPostBySlug(slug);
+type Props = {
+  searchParams: Promise<{ tag?: string | string[] }>;
+};
 
-  if (!post) return { title: "Post not found" };
+export default async function PublicPostsPage({ searchParams }: Props) {
+  noStore();
+  const sp = await searchParams;
 
-  return {
-    title: post.title,
-    alternates: { canonical: `/posts/${post.slug}` },
-  };
-}
+  const rawTag = Array.isArray(sp.tag) ? sp.tag[0] : sp.tag;
+  const tag = rawTag?.trim().toLowerCase();
 
-export default async function PublicPostDetailPage({ params }: Props) {
-  const { slug } = await params;
-
-  const post = await getPublicPostBySlug(slug);
-  if (!post) notFound();
+  // SSR fetch page 1 (10) + nextCursor
+  const { posts: initialPosts, nextCursor: initialCursor } = await getPublicPostsPage({
+    cursor: null,
+    take: 10,
+    tag,
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      {/* top nav row (outside card) */}
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href="/posts"
-          className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
-        >
-          ← Back to posts
-        </Link>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-white">Posts</h1>
+          <p className="mt-1 text-sm text-white/50">Published writing from the community.</p>
+
+          {tag ? (
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-sm text-white/60">
+                Filtering by <span className="text-white">#{tag}</span>
+              </p>
+              <Link href="/posts" className="text-xs text-white/50 hover:text-white">
+                Clear filter
+              </Link>
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-        {/* title + actions cluster (desktop) */}
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            {post.title}
-          </h1>
-
-          {/* Desktop cluster: Fire + Copy + Share */}
-          <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <PostStatsBar
-              slug={post.slug}
-              initialViewCount={post.viewCount}
-              initialFireCount={post.fireCount}
-              showViews={false}
-              size="md"
-              stretch={false}
-            />
-            <PostShareActions title={post.title} size="md" />
-          </div>
-        </div>
-
-        {/* metadata line + inline views */}
-        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
-          {post.author?.username ? (
-            <Link
-              href={`/u/${post.author.username}`}
-              className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
-            >
-              {post.author.avatarKey ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
-                  alt=""
-                  className="h-5 w-5 rounded-full border border-white/10 object-cover"
-                />
-              ) : (
-                <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
-              )}
-
-              <span className="underline-offset-4 group-hover:underline">
-                {post.author.name ?? post.author.username}
-              </span>
-              <span className="text-white/30 transition group-hover:text-white/50">→</span>
-            </Link>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-white/70">
-              <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
-              {post.author?.name ?? "Anonymous"}
-            </span>
-          )}
-
-          <span className="text-white/20">·</span>
-
-          <span>
-            {post.publishedAt
-              ? new Intl.DateTimeFormat("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "2-digit",
-                }).format(new Date(post.publishedAt))
-              : "Unpublished"}
-          </span>
-
-          <span className="text-white/20">·</span>
-
-          <span>{post.readingTimeMin} min read</span>
-
-          <span className="text-white/20">·</span>
-
-          <PostViewsInline slug={post.slug} initialViewCount={post.viewCount} />
-        </p>
-
-        {/* tags + mobile actions */}
-        <div className="mt-4 flex flex-col gap-3">
-          <TagChips tags={post.tags} variant="detail" />
-
-          {/* Mobile: 3-column equal width row (Fire | Copy | Share) */}
-          <div className="grid grid-cols-3 gap-2 sm:hidden">
-            <PostStatsBar
-              slug={post.slug}
-              initialViewCount={post.viewCount}
-              initialFireCount={post.fireCount}
-              showViews={false}
-              size="sm"
-              stretch
-              className="w-full"
-            />
-            <PostShareActions title={post.title} size="sm" layout="grid" className="col-span-2" />
-          </div>
-        </div>
-
-        {/* divider before content */}
-        <div className="mt-6 border-t border-white/5 pt-6">
-          <div className="prose prose-invert max-w-none leading-relaxed">
-            <Markdown content={post.contentMd} />
-          </div>
-        </div>
-      </article>
+      {/* client infinite feed */}
+      <PublicPostsFeed
+        initialPosts={initialPosts}
+        initialCursor={initialCursor}
+        tag={tag}
+        scope="posts"
+      />
     </main>
   );
 }
