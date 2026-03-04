@@ -1,62 +1,71 @@
 # Parchment Blog
 
-A blog platform built with **Next.js, TypeScript, Prisma, and PostgreSQL**.
+**Parchment Blog** is a modern blogging platform built with **Next.js, TypeScript, Prisma, and PostgreSQL**.
+
+The project focuses on providing a clean writing experience while maintaining a production-grade architecture with typed APIs, efficient data fetching, and optimized performance.
+
+---
+
+## Features
+
+### Authentication
+
+- Secure session-based authentication
+- User accounts with profile avatars
+- Protected dashboard routes
+
+### Writing & Publishing
+
+- Create, edit, and delete posts
+- Draft vs published workflow
+- Personal dashboard for managing content
+
+### Public Blog
+
+- Public feed of published posts
+- Individual post pages
+- Reading time estimation
+- View tracking
+
+### Social Sharing
+
+- Dynamic OpenGraph images generated per post
+- Clean social preview cards for sharing links
+
+### Performance
+
+- Server-first architecture using the Next.js App Router
+- Efficient database queries with Prisma
+- Smart caching and revalidation strategies
+
+---
 
 ## Tech Stack
 
-- **Frontend / App**: Next.js (App Router), React, TypeScript, TailwindCSS
-- **Data**: PostgreSQL, Prisma ORM
-- **State / Fetching**: TanStack React Query
-- **Validation**: Zod
-- **Infra (local)**: Docker Compose (Postgres)
+### Frontend
+
+- Next.js (App Router)
+- React
+- TypeScript
+- Tailwind CSS
+
+### Backend
+
+- PostgreSQL
+- Prisma ORM
+- Next.js Route Handlers
+
+### Data & State
+
+- TanStack React Query
+- Zod validation
+
+### Infrastructure
+
+- Docker Compose for local PostgreSQL
+- Vercel deployment
+- AWS S3 for avatar storage
 
 ---
 
-## Getting Started (Local Development)
-
-### 1. Install dependencies
-
-```bash
-npm install
-```
-
-### 2. Start PostgreSQL
-
-```bash
-docker compose up -d
-```
-
-### 3. Configure environment
-
-Create a `.env` file:
-
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/blog?schema=public"
-NEXTAUTH_SECRET="dev-secret-change-me"
-NEXTAUTH_URL="http://localhost:3000"
-```
-
-### 4. Run migrations & generate Prisma client
-
-```bash
-npx prisma migrate dev
-```
-
-### 5. Start the dev server
-
-```bash
-npm run dev
-```
-
-### 6. Verify setup
-
-Visit:
-
-- `http://localhost:3000`
-- `http://localhost:3000/api/health` → should return `{ ok: true }`
-
----
-
-## Project Status
-
-🚧 **In active development**
+## Architecture Overview
