@@ -17,6 +17,8 @@ import {
 } from "@/lib/api/posts";
 import { parseTagsInput } from "@/lib/tags";
 
+import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
+
 export default function EditPostPage() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -144,7 +146,7 @@ export default function EditPostPage() {
 
   if (!id) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="mx-auto max-w-[845px] px-4 py-10">
         <p className="text-white/70">Missing post id.</p>
         <div className="mt-4">
           <Link
@@ -162,7 +164,7 @@ export default function EditPostPage() {
 
   if (isPending) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="mx-auto max-w-[845px] px-4 py-10">
         <p className="text-white/70">Loading…</p>
       </main>
     );
@@ -170,7 +172,7 @@ export default function EditPostPage() {
 
   if (!data || !data.ok) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
+      <main className="mx-auto max-w-[845px] px-4 py-10">
         <p className="text-white/70">{data?.message ?? "Unable to load post."}</p>
         <div className="mt-4">
           <Link
@@ -187,7 +189,7 @@ export default function EditPostPage() {
   const isPublished = Boolean(data.post.publishedAt);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       <div className="flex items-center justify-between">
         <Link
           href="/dashboard/posts"
@@ -290,12 +292,7 @@ export default function EditPostPage() {
 
           <div>
             <label className="text-sm font-medium text-white">Content</label>
-            <textarea
-              value={contentMd}
-              onChange={(e) => setContentMd(e.target.value)}
-              className="mt-2 min-h-65 w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
-              required
-            />
+            <MarkdownEditor value={contentMd} onChange={setContentMd} minHeight={420} />
           </div>
 
           {error ? (

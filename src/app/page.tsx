@@ -13,7 +13,7 @@ export default async function HomePage() {
   const posts = await getPublicPosts();
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       {/* hero */}
       <section className="space-y-4 text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">

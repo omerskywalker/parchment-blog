@@ -64,7 +64,7 @@ export default async function PublicProfilePage({ params }: Props) {
     : null;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       <div className="flex items-center justify-between gap-4">
         <Link
           href="/posts"
