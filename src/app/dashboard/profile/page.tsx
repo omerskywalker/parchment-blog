@@ -208,7 +208,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="text-xs text-white/35">
-                Signed in as <span className="text-white/50">{me.data.user.email}</span>
+                signed in as <span className="text-white/50">{me.data.user.email}</span>
               </div>
             </div>
           </div>

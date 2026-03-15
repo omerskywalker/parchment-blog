@@ -15,9 +15,9 @@ type Props = {
 
 // ─── Accent palette ──────────────────────────────────────────────
 // Swap these three to retheme the entire editor highlight scheme.
-const accentPrimary = "#d4c8e2"; // cream    — H1, blockquote, inserted
-const accentSecondary = "#a8a8b0"; // silver   — H3, list markers
-const accentAlternate = "#f0ece4"; // lavender — H2, links, labels
+const accentPrimary = "#b8d4c0"; // cream    — H1, blockquote, inserted
+const accentSecondary = "#d4c8e2"; // silver   — H3, list markers
+const accentAlternate = "#d4bfa8"; // lavender — H2, links, labels
 // ─────────────────────────────────────────────────────────────────
 
 const markdownHighlightStyle = HighlightStyle.define([
