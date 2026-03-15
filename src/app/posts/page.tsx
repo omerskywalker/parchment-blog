@@ -30,7 +30,7 @@ export default async function PublicPostsPage({ searchParams }: Props) {
   });
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-white">Posts</h1>

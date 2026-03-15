@@ -25,6 +25,10 @@ export default function Markdown({ content }: Props) {
         "prose-hr:border-white/10",
         // lists can get tight in dark UI; a little extra readability:
         "prose-li:marker:text-white/30",
+        "prose-headings:text-white",
+        "prose-h1:text-3xl",
+        "prose-h2:text-2xl",
+        "prose-h3:text-xl",
       ].join(" ")}
     >
       <ReactMarkdown

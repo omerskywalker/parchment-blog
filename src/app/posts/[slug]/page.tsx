@@ -49,7 +49,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
   if (!post) notFound();
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       {/* top nav row (outside card) */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -63,7 +63,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
         {/* title + actions cluster (desktop) */}
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-2xl">
             {post.title}
           </h1>
 

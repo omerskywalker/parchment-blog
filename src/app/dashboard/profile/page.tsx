@@ -104,7 +104,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       {showWelcome && (
         <div className="mx-auto mb-4 max-w-3xl rounded-2xl border border-white/10 bg-black/40 p-4">
           <div className="flex items-start justify-between gap-4">

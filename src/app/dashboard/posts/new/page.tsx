@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createPost } from "@/lib/api/posts";
 import { qk } from "@/lib/queryKeys";
 import { parseTagsInput } from "@/lib/tags";
+import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
 
 type FormState = {
   title: string;
@@ -69,7 +70,7 @@ export default function NewPostPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
+    <main className="4py-10">
       {/* top row: back button */}
       <div className="flex items-center justify-between">
         <Link
@@ -121,12 +122,10 @@ export default function NewPostPage() {
           {/* content */}
           <div>
             <label className="text-sm font-medium text-white">Content</label>
-            <textarea
+            <MarkdownEditor
               value={form.contentMd}
-              onChange={(e) => update("contentMd", e.target.value)}
-              className="mt-2 min-h-55 w-full resize-y rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
-              placeholder="Write in Markdown..."
-              required
+              onChange={(value) => update("contentMd", value)}
+              minHeight={360}
             />
           </div>
 
