@@ -63,7 +63,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
         {/* title + actions cluster (desktop) */}
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-4xl">
             {post.title}
           </h1>
 
