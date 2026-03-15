@@ -93,7 +93,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                 <img
                   src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
                   alt=""
-                  className="h-5 w-5 rounded-full border border-white/10 object-cover"
+                  className="h-8 w-8 rounded-full border border-white/10 object-cover"
                 />
               ) : (
                 <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />

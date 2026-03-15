@@ -32,7 +32,7 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-semibold tracking-tight text-white">
             {capitalizeEachWord(session.user.name)}&apos;s Dashboard
           </h1>
-          <p className="mt-2 text-[rgb(var(--muted))]">Signed in as {session.user.email}</p>
+          <p className="mt-2 text-[rgb(var(--muted))]">signed in as {session.user.email}</p>
         </div>
 
         <div className="flex gap-2">

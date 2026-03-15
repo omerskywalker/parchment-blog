@@ -286,7 +286,7 @@ export default function PublicPostsFeed({
                             <img
                               src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
                               alt=""
-                              className="h-5 w-5 rounded-full border border-white/10 object-cover"
+                              className="h-6 w-6 rounded-full border border-white/10 object-cover"
                             />
                           ) : (
                             <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
