@@ -15,9 +15,12 @@ import {
   MyPostsResponse,
   PostDetail,
 } from "@/lib/api/posts";
-import { parseTagsInput } from "@/lib/tags";
+import { wordCount } from "@/lib/wordCount";
+import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
 
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
+import TagPillInput from "@/app/components/editor/TagPillInput";
+import Markdown from "@/app/components/Markdown";
 
 export default function EditPostPage() {
   const router = useRouter();
@@ -26,12 +29,22 @@ export default function EditPostPage() {
   const params = useParams<{ id?: string }>();
   const id = params?.id;
 
-  // hooks must be declared before any conditional returns -- TOP LEVEL
   const [title, setTitle] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [contentMd, setContentMd] = React.useState("");
-  const [tagsInput, setTagsInput] = React.useState("");
+  const [tags, setTags] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [showPreview, setShowPreview] = React.useState(false);
+
+  // Track the last-saved state to compute isDirty
+  const savedRef = React.useRef({ title: "", slug: "", contentMd: "", tags: "[]" });
+  const isDirty =
+    title !== savedRef.current.title ||
+    slug !== savedRef.current.slug ||
+    contentMd !== savedRef.current.contentMd ||
+    JSON.stringify(tags) !== savedRef.current.tags;
+
+  useUnsavedWarning(isDirty);
 
   function applyPublishedAtToCaches(publishedAt: string | null) {
     if (!id) return;
@@ -62,10 +75,18 @@ export default function EditPostPage() {
   React.useEffect(() => {
     if (!didInit.current && postQuery.data?.ok) {
       didInit.current = true;
-      setTitle(postQuery.data.post.title);
-      setSlug(postQuery.data.post.slug);
-      setContentMd(postQuery.data.post.contentMd);
-      setTagsInput((postQuery.data.post.tags ?? []).join(", "));
+      const p = postQuery.data.post;
+      const loadedTags = p.tags ?? [];
+      setTitle(p.title);
+      setSlug(p.slug);
+      setContentMd(p.contentMd);
+      setTags(loadedTags);
+      savedRef.current = {
+        title: p.title,
+        slug: p.slug,
+        contentMd: p.contentMd,
+        tags: JSON.stringify(loadedTags),
+      };
     }
   }, [postQuery.data]);
 
@@ -75,7 +96,7 @@ export default function EditPostPage() {
         title: title.trim(),
         slug: slug.trim(),
         contentMd,
-        tags: parseTagsInput(tagsInput),
+        tags,
       }),
     onSuccess: async (res) => {
       if (!res.ok) return setError(res.message ?? "Unable to save.");
@@ -187,6 +208,8 @@ export default function EditPostPage() {
   }
 
   const isPublished = Boolean(data.post.publishedAt);
+  const wc = wordCount(contentMd);
+  const anyPending = deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending;
 
   return (
     <main className="mx-auto max-w-[845px] px-4 py-10">
@@ -204,7 +227,7 @@ export default function EditPostPage() {
             setError(null);
             deleteMutation.mutate();
           }}
-          disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
+          disabled={anyPending}
           className="rounded-md border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 transition-colors hover:bg-red-500/15 disabled:opacity-60"
         >
           {deleteMutation.isPending ? "Deleting…" : "Delete"}
@@ -241,7 +264,7 @@ export default function EditPostPage() {
             setError(null);
             publishMutation.mutate(!isPublished);
           }}
-          disabled={deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending}
+          disabled={anyPending}
           className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
         >
           {publishMutation.isPending ? "Updating…" : isPublished ? "Unpublish" : "Publish"}
@@ -275,24 +298,63 @@ export default function EditPostPage() {
               className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
               required
             />
+            {slug ? (
+              <p className="mt-1.5 text-xs text-white/40">
+                URL: /posts/<span className="text-white/60">{slug}</span>
+              </p>
+            ) : null}
           </div>
 
           <div>
             <label className="text-sm font-medium text-white">
               Tags <span className="text-white/50">(optional)</span>
             </label>
-            <input
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              className="mt-2 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white shadow-sm outline-none focus:ring-2 focus:ring-white/20"
-              placeholder="e.g. bitcoin, hard-money, dev"
-            />
-            <p className="mt-2 text-xs text-white/50">Comma-separated list of tags.</p>
+            <TagPillInput tags={tags} onChange={setTags} />
+            <p className="mt-1.5 text-xs text-white/40">Press Enter or comma to add a tag.</p>
           </div>
 
           <div>
-            <label className="text-sm font-medium text-white">Content</label>
-            <MarkdownEditor value={contentMd} onChange={setContentMd} minHeight={420} />
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-white">Content</label>
+              <div className="flex items-center gap-1 rounded-md border border-white/10 bg-black/30 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={[
+                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    !showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
+                  ].join(" ")}
+                >
+                  Write
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className={[
+                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
+                  ].join(" ")}
+                >
+                  Preview
+                </button>
+              </div>
+            </div>
+
+            {showPreview ? (
+              <div className="mt-2 min-h-[420px] overflow-auto rounded-md border border-white/10 bg-black/30 px-5 py-4">
+                {contentMd.trim() ? (
+                  <Markdown content={contentMd} />
+                ) : (
+                  <p className="text-sm text-white/30">Nothing to preview yet.</p>
+                )}
+              </div>
+            ) : (
+              <MarkdownEditor value={contentMd} onChange={setContentMd} minHeight={420} />
+            )}
+
+            <p className="mt-1.5 text-right text-xs text-white/30">
+              {wc} {wc === 1 ? "word" : "words"}
+            </p>
           </div>
 
           {error ? (
@@ -304,9 +366,7 @@ export default function EditPostPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={
-                deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending
-              }
+              disabled={anyPending}
               className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
             >
               {saveMutation.isPending ? "Saving…" : "Save & exit"}
