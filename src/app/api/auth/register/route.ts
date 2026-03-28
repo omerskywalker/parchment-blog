@@ -4,6 +4,7 @@ import { RegisterSchema } from "@/lib/validators/auth";
 import { jsonError, jsonOk } from "@/lib/http";
 import { Prisma } from "@prisma/client";
 import { ERROR_CODES } from "@/lib/server/error-codes";
+import { checkRateLimit, getIp, registerLimiter } from "@/lib/server/rate-limit";
 
 function normalizeUsername(raw: string) {
   return raw
@@ -40,6 +41,10 @@ async function ensureUniqueUsername(base: string) {
 }
 
 export async function POST(req: Request) {
+  const ip = await getIp();
+  const limited = await checkRateLimit(registerLimiter, ip);
+  if (limited) return limited;
+
   let body: unknown;
 
   try {

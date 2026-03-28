@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { jsonOk, jsonError } from "@/lib/http";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 import { hashToken } from "@/lib/server/password-reset";
+import { checkRateLimit, getIp, resetPasswordLimiter } from "@/lib/server/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -11,6 +12,10 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = await getIp();
+  const limited = await checkRateLimit(resetPasswordLimiter, ip);
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return jsonError(ERROR_CODES.VALIDATION_ERROR, 400);
