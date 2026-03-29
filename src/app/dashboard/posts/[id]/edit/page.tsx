@@ -19,8 +19,7 @@ import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
 
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
-import TagPillInput from "@/app/components/editor/TagPillInput";
-import Markdown from "@/app/components/Markdown";
+import { EditorSkeleton } from "@/app/components/skeletons/EditorSkeleton";
 
 export default function EditPostPage() {
   const router = useRouter();
@@ -184,11 +183,7 @@ export default function EditPostPage() {
   const { data, isPending } = postQuery;
 
   if (isPending) {
-    return (
-      <main className="mx-auto max-w-[845px] px-4 py-10">
-        <p className="text-white/70">Loading…</p>
-      </main>
-    );
+    return <EditorSkeleton />;
   }
 
   if (!data || !data.ok) {

@@ -11,6 +11,7 @@ import {
   presignAvatarUpload,
   uploadToS3PutUrl,
 } from "@/lib/api/profile";
+import { ProfileSkeleton } from "@/app/components/skeletons/ProfileSkeleton";
 
 export default function ProfilePage() {
   const sp = useSearchParams();
@@ -130,7 +131,7 @@ export default function ProfilePage() {
 
       <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">
         {me.isLoading ? (
-          <p className="text-white/60">Loading…</p>
+          <ProfileSkeleton />
         ) : me.data?.ok ? (
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex items-center gap-4 sm:flex-col sm:items-start">
