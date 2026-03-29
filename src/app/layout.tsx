@@ -37,6 +37,11 @@ export const metadata: Metadata = {
     template: "%s · Parchment Blog",
   },
   description: "A clean space for independent thought.",
+  alternates: {
+    types: {
+      "application/rss+xml": "/rss.xml",
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
