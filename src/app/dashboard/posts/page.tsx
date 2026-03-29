@@ -17,19 +17,19 @@ export default function MyPostsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link
           href="/dashboard/"
-          className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+          className="shrink-0 rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
         >
-          ← Back to dashboard
+          ← Back
         </Link>
 
-        <h1 className="text-2xl font-semibold tracking-tight text-white">My posts</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">My posts</h1>
 
         <Link
           href="/dashboard/posts/new"
-          className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+          className="shrink-0 rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
         >
           + New post
         </Link>

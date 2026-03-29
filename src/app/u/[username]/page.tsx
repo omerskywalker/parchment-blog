@@ -92,7 +92,7 @@ export default async function PublicProfilePage({ params }: Props) {
       </div>
 
       {/* Profile header (visually distinct) */}
-      <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+      <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="flex items-start gap-4">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
             {avatarUrl ? (
@@ -153,7 +153,7 @@ export default async function PublicProfilePage({ params }: Props) {
             <Link
               key={p.id}
               href={`/posts/${p.slug}`}
-              className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-black/50"
+              className="block rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-5 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-black/50"
             >
               <h2 className="text-lg font-medium text-white">{p.title}</h2>
 

@@ -35,7 +35,7 @@ export default async function DashboardPage() {
           <p className="mt-2 text-[rgb(var(--muted))]">signed in as {session.user.email}</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/dashboard/posts/new"
             className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
