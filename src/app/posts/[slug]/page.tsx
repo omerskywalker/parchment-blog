@@ -63,7 +63,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
       <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
         {/* title + actions cluster (desktop) */}
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-2xl">
+          <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
             {post.title}
           </h1>
 
@@ -82,7 +82,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
         </div>
 
         {/* metadata line + inline views */}
-        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
           {post.author?.username ? (
             <Link
               href={`/u/${post.author.username}`}

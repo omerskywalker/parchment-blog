@@ -88,7 +88,7 @@ export default function Header() {
           className="text-lg font-semibold tracking-tight text-white"
           onClick={() => setOpen(false)}
         >
-          Parchment Blog
+          Parchment
         </Link>
 
         {/* --- desktop nav --- */}

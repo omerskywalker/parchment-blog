@@ -258,8 +258,8 @@ export default function EditPostPage() {
         </button>
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight text-white">Edit post</h1>
 
           <span
@@ -295,7 +295,7 @@ export default function EditPostPage() {
         </button>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">
+      <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-6">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -345,7 +345,7 @@ export default function EditPostPage() {
                   type="button"
                   onClick={() => setShowPreview(false)}
                   className={[
-                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    "rounded px-3 py-1.5 text-xs transition-colors",
                     !showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
                   ].join(" ")}
                 >
@@ -355,7 +355,7 @@ export default function EditPostPage() {
                   type="button"
                   onClick={() => setShowPreview(true)}
                   className={[
-                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    "rounded px-3 py-1.5 text-xs transition-colors",
                     showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
                   ].join(" ")}
                 >

@@ -93,7 +93,7 @@ export default function NewPostPage() {
   const wc = wordCount(form.contentMd);
 
   return (
-    <main className="4py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-10">
       <div className="flex items-center justify-between">
         <Link
           href="/dashboard/posts"
@@ -108,7 +108,7 @@ export default function NewPostPage() {
         <p className="mt-1 text-sm text-white/50">Create a draft. You can publish later.</p>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6">
+      <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-6">
         <form onSubmit={onSubmit} className="space-y-5">
           {/* title */}
           <div>
@@ -164,7 +164,7 @@ export default function NewPostPage() {
                   type="button"
                   onClick={() => setShowPreview(false)}
                   className={[
-                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    "rounded px-3 py-1.5 text-xs transition-colors",
                     !showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
                   ].join(" ")}
                 >
@@ -174,7 +174,7 @@ export default function NewPostPage() {
                   type="button"
                   onClick={() => setShowPreview(true)}
                   className={[
-                    "rounded px-2.5 py-1 text-xs transition-colors",
+                    "rounded px-3 py-1.5 text-xs transition-colors",
                     showPreview ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
                   ].join(" ")}
                 >
