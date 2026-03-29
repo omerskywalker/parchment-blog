@@ -7,7 +7,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { createPost } from "@/lib/api/posts";
 import { qk } from "@/lib/queryKeys";
-import { parseTagsInput } from "@/lib/tags";
 import { slugify } from "@/lib/validators/posts";
 import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";

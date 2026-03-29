@@ -36,13 +36,13 @@ export default function EditPostPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
 
-  // Track the last-saved state to compute isDirty
-  const savedRef = React.useRef({ title: "", slug: "", contentMd: "", tags: "[]" });
+  // Track the last-saved state to compute isDirty (must be state, not a ref, so render can read it)
+  const [savedState, setSavedState] = React.useState({ title: "", slug: "", contentMd: "", tags: "[]" });
   const isDirty =
-    title !== savedRef.current.title ||
-    slug !== savedRef.current.slug ||
-    contentMd !== savedRef.current.contentMd ||
-    JSON.stringify(tags) !== savedRef.current.tags;
+    title !== savedState.title ||
+    slug !== savedState.slug ||
+    contentMd !== savedState.contentMd ||
+    JSON.stringify(tags) !== savedState.tags;
 
   useUnsavedWarning(isDirty);
 
@@ -81,12 +81,12 @@ export default function EditPostPage() {
       setSlug(p.slug);
       setContentMd(p.contentMd);
       setTags(loadedTags);
-      savedRef.current = {
+      setSavedState({
         title: p.title,
         slug: p.slug,
         contentMd: p.contentMd,
         tags: JSON.stringify(loadedTags),
-      };
+      });
     }
   }, [postQuery.data]);
 
