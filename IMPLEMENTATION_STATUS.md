@@ -8,10 +8,10 @@
     \|__|     \|__|\|__|\|__|\|__|\|_______|\|__|\|__|\|__|\|_______|\|_______|\|__| \|__|    \|__|
 
   B L O G   ·   C O D E   R E V I E W   I M P L E M E N T A T I O N   S T A T U S
-  Last updated: 2026-03-29
+  Last updated: 2026-03-28
 
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  4 merged  ║
+║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  5 open   ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 
@@ -72,6 +72,16 @@
   │ • Replaces window.confirm() on the edit post page               │
   └─────────────────────────────────────────────────────────────────┘
 
+  PR #44  feat/autosave
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • useLocalDraft hook — generic localStorage save/restore        │
+  │ • useDebounce hook   — stable fn-ref debounce                   │
+  │ • New post: saves to localStorage on every change, restores on  │
+  │   mount (if blank), clears on submit or Cancel                  │
+  │ • Edit post: debounced PATCH 3 s after typing stops;            │
+  │   "Saving…" → "Draft saved" status indicator in the form       │
+  └─────────────────────────────────────────────────────────────────┘
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🏗️   TODO — NOT STARTED
@@ -118,11 +128,6 @@
   │ • Favicon + global metadata pass                                │
   └─────────────────────────────────────────────────────────────────┘
 
-  feat/autosave
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Draft autosave to localStorage (immediate)                    │
-  │ • Debounced API save every ~30s while editing                   │
-  └─────────────────────────────────────────────────────────────────┘
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -130,6 +135,6 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Merged  [████████░░░░░░░░░░░░]  3 / 11 branches
-  Open    [████░░░░░░░░░░░░░░░░]  2 / 11 awaiting review
-  Todo    [░░░░░░░░░░░░░░░░░░░░]  6 / 11 not started
+  Open    [██████░░░░░░░░░░░░░░]  3 / 11 awaiting review
+  Todo    [░░░░░░░░░░░░░░░░░░░░]  5 / 11 not started
 
