@@ -19,6 +19,7 @@ export default function DeleteConfirmModal({
   onConfirm,
   onCancel,
 }: Props) {
+  // Close on Escape
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onCancel();
@@ -43,7 +44,10 @@ export default function DeleteConfirmModal({
 
       {/* panel */}
       <div className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-[#0f0f0f] p-6 shadow-2xl">
-        <h2 id="delete-modal-title" className="text-base font-semibold text-white">
+        <h2
+          id="delete-modal-title"
+          className="text-base font-semibold text-white"
+        >
           {title}
         </h2>
 
