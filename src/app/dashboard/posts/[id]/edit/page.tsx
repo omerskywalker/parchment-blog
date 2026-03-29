@@ -23,6 +23,7 @@ import TagPillInput from "@/app/components/editor/TagPillInput";
 import Markdown from "@/app/components/Markdown";
 import DeleteConfirmModal from "@/app/components/DeleteConfirmModal";
 import { EditorSkeleton } from "@/app/components/skeletons/EditorSkeleton";
+import DeleteConfirmModal from "@/app/components/DeleteConfirmModal";
 
 export default function EditPostPage() {
   const router = useRouter();
