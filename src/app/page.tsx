@@ -6,6 +6,12 @@ import Link from "next/link";
 import { getPublicPosts } from "@/lib/server/public-posts";
 import HomeLatestPosts from "./components/HomeLatestPosts";
 
+export const metadata = {
+  title: "Parchment — Write Without Noise",
+  description:
+    "A minimalist blogging platform for independent writers. Publish your thoughts without distraction.",
+};
+
 export default async function HomePage() {
   const session = await getServerSession(authOptions);
   const isLoggedIn = !!session?.user;
@@ -17,10 +23,13 @@ export default async function HomePage() {
       {/* hero */}
       <section className="space-y-4 text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Parchment Blog
+          Parchment
         </h1>
 
-        <p className="text-sm text-white/60 sm:text-base">A clean space for independent thought.</p>
+        <p className="text-sm text-white/60 sm:text-base">
+          Write without noise.{" "}
+          <span className="text-white/40">No algorithms. No feeds. Just your words.</span>
+        </p>
 
         {/* primary CTA */}
         <div className="pt-4">
