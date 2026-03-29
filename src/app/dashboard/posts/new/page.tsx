@@ -10,6 +10,7 @@ import { qk } from "@/lib/queryKeys";
 import { slugify } from "@/lib/validators/posts";
 import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
+import { useLocalDraft } from "@/lib/hooks/useLocalDraft";
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
 import TagPillInput from "@/app/components/editor/TagPillInput";
 import Markdown from "@/app/components/Markdown";
@@ -46,12 +47,28 @@ export default function NewPostPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: qk.myPosts() });
+      clearDraft();
       router.push("/dashboard/posts");
     },
     onError: () => {
       setFormError("Something went wrong. Please try again.");
     },
   });
+
+  const DRAFT_KEY = "parchment:draft:new";
+
+  const { clear: clearDraft } = useLocalDraft(
+    DRAFT_KEY,
+    form,
+    (saved) => {
+      setForm((current) => {
+        // Only restore if the form is still blank
+        const isEmpty =
+          !current.title && !current.contentMd && !current.slug && current.tags.length === 0;
+        return isEmpty ? (saved as typeof form) : current;
+      });
+    },
+  );
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -196,6 +213,7 @@ export default function NewPostPage() {
           <div className="flex items-center justify-end gap-3">
             <Link
               href="/dashboard/posts"
+              onClick={() => clearDraft()}
               className="rounded-md px-3 py-2 text-sm text-white/70 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
             >
               Cancel
