@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/posts";
 import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
 import TagPillInput from "@/app/components/editor/TagPillInput";
@@ -36,6 +37,7 @@ export default function EditPostPage() {
   const [contentMd, setContentMd] = React.useState("");
   const [tags, setTags] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const [autoSaveStatus, setAutoSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
   const [showPreview, setShowPreview] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
 
@@ -112,6 +114,33 @@ export default function EditPostPage() {
     },
     onError: () => setError("Something went wrong."),
   });
+
+  const autoSaveMutation = useMutation({
+    mutationFn: () =>
+      updatePost(id as string, {
+        title: title.trim(),
+        slug: slug.trim(),
+        contentMd,
+        tags,
+      }),
+    onMutate: () => setAutoSaveStatus("saving"),
+    onSuccess: (res) => {
+      if (res.ok) {
+        setAutoSaveStatus("saved");
+        setSavedState({ title: title.trim(), slug: slug.trim(), contentMd, tags: JSON.stringify(tags) });
+      }
+    },
+    onError: () => setAutoSaveStatus("idle"),
+  });
+
+  useDebounce(
+    () => {
+      if (!id || !didInit.current || !isDirty || saveMutation.isPending || autoSaveMutation.isPending) return;
+      autoSaveMutation.mutate();
+    },
+    3000,
+    [title, slug, contentMd, tags],
+  );
 
   const deleteMutation = useMutation({
     mutationFn: () => deletePost(id as string),
@@ -351,6 +380,12 @@ export default function EditPostPage() {
               {wc} {wc === 1 ? "word" : "words"}
             </p>
           </div>
+
+          {autoSaveStatus !== "idle" && (
+            <p className="text-right text-xs text-white/30">
+              {autoSaveStatus === "saving" ? "Saving…" : "Draft saved"}
+            </p>
+          )}
 
           {error ? (
             <div className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
