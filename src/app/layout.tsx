@@ -32,11 +32,37 @@ function getBaseUrl() {
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
+
   title: {
-    default: "Parchment Blog",
-    template: "%s · Parchment Blog",
+    default: "Parchment — Write Without Noise",
+    template: "%s · Parchment",
   },
-  description: "A clean space for independent thought.",
+
+  description:
+    "Parchment is a minimalist blogging platform for independent writers. No algorithmic feeds. No distractions. Just your words.",
+
+  keywords: ["blog", "writing", "minimalist", "independent publishing"],
+
+  openGraph: {
+    type: "website",
+    siteName: "Parchment",
+    title: "Parchment — Write Without Noise",
+    description:
+      "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
+  },
+
+  twitter: {
+    card: "summary",
+    title: "Parchment — Write Without Noise",
+    description:
+      "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
+  },
+
+  alternates: {
+    types: {
+      "application/rss+xml": "/rss.xml",
+    },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
