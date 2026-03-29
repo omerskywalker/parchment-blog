@@ -48,11 +48,6 @@
   │ • Post preview toggle      — Write / Preview segmented control  │
   └─────────────────────────────────────────────────────────────────┘
 
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔍  OPEN — AWAITING REVIEW
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
   PR #39  feat/author-profile-polish
   ┌─────────────────────────────────────────────────────────────────┐
   │ • generateMetadata — proper <title> + description per profile   │
@@ -84,15 +79,31 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🏗️   TODO — NOT STARTED
+  🔍  OPEN — AWAITING REVIEW
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  feat/rss-feed
+  PR #43  feat/brand-and-meta                        ← merge first
   ┌─────────────────────────────────────────────────────────────────┐
-  │ • /rss.xml route handler (App Router route.ts)                  │
-  │ • Full <item> entries: title, link, pubDate, description        │
-  │ • Cache-Control header for CDN friendliness                     │
+  │ • Title: "Parchment — Write Without Noise"                      │
+  │ • Template: "%s · Parchment"                                    │
+  │ • Full OpenGraph + Twitter card defaults                        │
+  │ • Homepage h1 → "Parchment", new two-part tagline               │
+  │ • RSS autodiscovery included (superset of #42's layout change)  │
+  │   NOTE: layout.tsx conflict — accept #43's version              │
   └─────────────────────────────────────────────────────────────────┘
+
+  PR #44  feat/autosave                              ← merge any time (no conflicts)
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • New post: localStorage draft, restored on mount, cleared      │
+  │   on submit or Cancel                                            │
+  │ • Edit post: debounced PATCH 3s after last keystroke            │
+  │ • Subtle "Saving…" / "Draft saved" indicator in editor          │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🏗️   TODO — NOT STARTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   feat/search
   ┌─────────────────────────────────────────────────────────────────┐
