@@ -8,6 +8,20 @@ type Props = {
   params: Promise<{ username: string }>;
 };
 
+export async function generateMetadata({ params }: Props) {
+  const { username } = await params;
+  const user = await prisma.user.findFirst({
+    where: { username },
+    select: { name: true, username: true, bio: true },
+  });
+  if (!user) return {};
+  const displayName = user.name ?? user.username ?? "User";
+  return {
+    title: `${displayName} (@${user.username}) — Parchment`,
+    description: user.bio ?? `Read posts by ${displayName} on Parchment.`,
+  };
+}
+
 export default async function PublicProfilePage({ params }: Props) {
   const { username } = await params;
 
@@ -31,6 +45,8 @@ export default async function PublicProfilePage({ params }: Props) {
           publishedAt: true,
           updatedAt: true,
           tags: true,
+          viewCount: true,
+          fireCount: true,
         },
       },
 
@@ -48,12 +64,13 @@ export default async function PublicProfilePage({ params }: Props) {
     ? await prisma.post.aggregate({
         where: { author: { username }, publishedAt: { not: null } },
         _count: { _all: true },
-        _sum: { viewCount: true },
+        _sum: { viewCount: true, fireCount: true },
       })
     : null;
 
   const totalPosts = stats?._count?._all ?? 0;
   const totalReads = stats?._sum?.viewCount ?? 0;
+  const totalFires = stats?._sum?.fireCount ?? 0;
 
   if (!user) notFound();
 
@@ -77,7 +94,7 @@ export default async function PublicProfilePage({ params }: Props) {
       {/* Profile header (visually distinct) */}
       <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
         <div className="flex items-start gap-4">
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -85,7 +102,11 @@ export default async function PublicProfilePage({ params }: Props) {
                 alt={`${displayName} avatar`}
                 className="h-full w-full object-cover"
               />
-            ) : null}
+            ) : (
+              <span className="text-xl font-semibold text-white/40 select-none">
+                {displayName.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
 
           <div className="min-w-0">
@@ -104,6 +125,9 @@ export default async function PublicProfilePage({ params }: Props) {
               <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
                 {totalReads.toLocaleString()} reads
               </span>
+              <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                {totalFires.toLocaleString()} 🔥
+              </span>
             </div>
           </div>
         </div>
@@ -118,8 +142,11 @@ export default async function PublicProfilePage({ params }: Props) {
       {/* Posts list */}
       <section className="mt-4 space-y-3">
         {user.posts.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-black/40 p-6">
-            <p className="text-white/80">No published posts yet.</p>
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-8 text-center">
+            <p className="text-base font-medium text-white/70">No published posts yet</p>
+            <p className="mt-1 text-sm text-white/40">
+              {displayName} hasn&apos;t published anything yet. Check back later.
+            </p>
           </div>
         ) : (
           user.posts.map((p) => (
@@ -152,6 +179,10 @@ export default async function PublicProfilePage({ params }: Props) {
                   ))}
                 </div>
               ) : null}
+              <div className="mt-2 flex items-center gap-3 text-xs text-white/35">
+                <span>{p.viewCount.toLocaleString()} reads</span>
+                {p.fireCount > 0 && <span>{p.fireCount} 🔥</span>}
+              </div>
             </Link>
           ))
         )}
