@@ -11,7 +11,7 @@
   Last updated: 2026-03-29
 
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  4 merged  ║
+║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  6 merged  ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 
@@ -48,11 +48,6 @@
   │ • Post preview toggle      — Write / Preview segmented control  │
   └─────────────────────────────────────────────────────────────────┘
 
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔍  OPEN — AWAITING REVIEW
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
   PR #39  feat/author-profile-polish
   ┌─────────────────────────────────────────────────────────────────┐
   │ • generateMetadata — proper <title> + description per profile   │
@@ -72,17 +67,41 @@
   │ • Replaces window.confirm() on the edit post page               │
   └─────────────────────────────────────────────────────────────────┘
 
+  PR #42  feat/rss-feed
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • /rss.xml route — RSS 2.0, 50 most recent published posts      │
+  │ • <item>: title, permalink, pubDate, author, tag categories     │
+  │ • Cache-Control: public, max-age=3600                           │
+  │ • Autodiscovery <link> in layout via metadata.alternates        │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🔍  OPEN — AWAITING REVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  PR #43  feat/brand-and-meta                        ← merge first
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Title: "Parchment — Write Without Noise"                      │
+  │ • Template: "%s · Parchment"                                    │
+  │ • Full OpenGraph + Twitter card defaults                        │
+  │ • Homepage h1 → "Parchment", new two-part tagline               │
+  │ • RSS autodiscovery included (superset of #42's layout change)  │
+  │   NOTE: layout.tsx conflict — accept #43's version              │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #44  feat/autosave                              ← merge any time (no conflicts)
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • New post: localStorage draft, restored on mount, cleared      │
+  │   on submit or Cancel                                            │
+  │ • Edit post: debounced PATCH 3s after last keystroke            │
+  │ • Subtle "Saving…" / "Draft saved" indicator in editor          │
+  └─────────────────────────────────────────────────────────────────┘
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🏗️   TODO — NOT STARTED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  feat/rss-feed
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • /rss.xml route handler (App Router route.ts)                  │
-  │ • Full <item> entries: title, link, pubDate, description        │
-  │ • Cache-Control header for CDN friendliness                     │
-  └─────────────────────────────────────────────────────────────────┘
 
   feat/search
   ┌─────────────────────────────────────────────────────────────────┐
@@ -111,25 +130,12 @@
   │ • React Query key factory audit                                 │
   └─────────────────────────────────────────────────────────────────┘
 
-  feat/brand-and-meta
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Homepage copy refresh                                         │
-  │ • OG image redesign — minimal "P" bubble                        │
-  │ • Favicon + global metadata pass                                │
-  └─────────────────────────────────────────────────────────────────┘
-
-  feat/autosave
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Draft autosave to localStorage (immediate)                    │
-  │ • Debounced API save every ~30s while editing                   │
-  └─────────────────────────────────────────────────────────────────┘
-
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📊  PROGRESS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Merged  [████████░░░░░░░░░░░░]  3 / 11 branches
+  Merged  [██████████████░░░░░░]  6 / 11 branches  (+ 2 hotfixes)
   Open    [████░░░░░░░░░░░░░░░░]  2 / 11 awaiting review
-  Todo    [░░░░░░░░░░░░░░░░░░░░]  6 / 11 not started
+  Todo    [░░░░░░░░░░░░░░░░░░░░]  4 / 11 not started
 
