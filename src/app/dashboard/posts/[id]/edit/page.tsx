@@ -19,6 +19,9 @@ import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
 
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
+import TagPillInput from "@/app/components/editor/TagPillInput";
+import Markdown from "@/app/components/Markdown";
+import DeleteConfirmModal from "@/app/components/DeleteConfirmModal";
 import { EditorSkeleton } from "@/app/components/skeletons/EditorSkeleton";
 
 export default function EditPostPage() {
@@ -34,6 +37,7 @@ export default function EditPostPage() {
   const [tags, setTags] = React.useState<string[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
+  const [showDeleteModal, setShowDeleteModal] = React.useState(false);
 
   // Track the last-saved state to compute isDirty (must be state, not a ref, so render can read it)
   const [savedState, setSavedState] = React.useState({ title: "", slug: "", contentMd: "", tags: "[]" });
@@ -217,11 +221,7 @@ export default function EditPostPage() {
         </Link>
 
         <button
-          onClick={() => {
-            if (!confirm("Delete this post? This cannot be undone.")) return;
-            setError(null);
-            deleteMutation.mutate();
-          }}
+          onClick={() => setShowDeleteModal(true)}
           disabled={anyPending}
           className="rounded-md border border-red-400/20 bg-red-500/10 px-3 py-1.5 text-sm text-red-200 transition-colors hover:bg-red-500/15 disabled:opacity-60"
         >
@@ -369,6 +369,16 @@ export default function EditPostPage() {
           </div>
         </form>
       </section>
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          isDeleting={deleteMutation.isPending}
+          onConfirm={() => {
+            setError(null);
+            deleteMutation.mutate();
+          }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
     </main>
   );
 }
