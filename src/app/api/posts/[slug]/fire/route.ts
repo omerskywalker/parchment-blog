@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getOrSetVisitorId } from "@/lib/server/visitor";
 import { ERROR_CODES } from "@/lib/server/error-codes";
+import { maybeNotifyFireMilestone } from "@/lib/server/fire-notifications";
 
 function jsonError(status: number, error: string, message?: string) {
   return NextResponse.json({ ok: false as const, error, message }, { status });
@@ -47,6 +48,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ slug: string 
       return { fired: true, fireCount: updated.fireCount };
     }
   });
+
+  // Best-effort milestone notification — never blocks the response
+  if (result.fired) {
+    void maybeNotifyFireMilestone(post.id, result.fireCount);
+  }
 
   return NextResponse.json({
     ok: true as const,

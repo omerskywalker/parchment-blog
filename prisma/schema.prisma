@@ -48,6 +48,7 @@ model Post {
   viewCount Int            @default(0)
   fireCount Int            @default(0)
   reactions PostReaction[]
+  fireNotifications FireNotification[]
 
   @@index([authorId])
   @@index([publishedAt])
@@ -109,6 +110,18 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model FireNotification {
+  id        String   @id @default(cuid())
+  postId    String
+  milestone Int
+  sentAt    DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, milestone])
+  @@index([postId])
 }
 
 model PasswordResetToken {
