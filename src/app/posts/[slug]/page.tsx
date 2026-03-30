@@ -11,6 +11,7 @@ import PostStatsBar from "@/app/components/post/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
 import { PostShareActions } from "@app/components/post/PostShareActions";
+import { RelatedPosts } from "@app/components/post/RelatedPosts";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 import PostViewsInline from "@app/components/post/PostViewsInline";
 
@@ -160,6 +161,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
           </div>
         </div>
       </article>
+
+      <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
     </main>
   );
 }
