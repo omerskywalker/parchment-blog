@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+echo "Running tests before push..."
+npm test
+echo "All tests passed."
