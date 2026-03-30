@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicPostsPage } from "@/lib/server/public-posts";
-import PublicPostsFeed from "./public-posts-feed";
+import PostsPageClient from "./PostsPageClient";
 import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata: Metadata = {
@@ -49,12 +49,10 @@ export default async function PublicPostsPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* client infinite feed */}
-      <PublicPostsFeed
+      <PostsPageClient
         initialPosts={initialPosts}
         initialCursor={initialCursor}
         tag={tag}
-        scope="posts"
       />
     </main>
   );
