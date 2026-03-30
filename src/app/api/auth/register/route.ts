@@ -5,6 +5,8 @@ import { jsonError, jsonOk } from "@/lib/http";
 import { Prisma } from "@prisma/client";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 import { checkRateLimit, getIp, registerLimiter } from "@/lib/server/rate-limit";
+import { getResend, appUrl, fromEmail } from "@/lib/email/resend";
+import { makeVerifyToken, hashVerifyToken, VERIFY_TOKEN_TTL_MS } from "@/lib/server/email-verify";
 
 function normalizeUsername(raw: string) {
   return raw
@@ -82,6 +84,9 @@ export async function POST(req: Request) {
       },
     });
 
+    // Send email verification (best-effort — never block registration)
+    void sendVerificationEmail(normalizedEmail);
+
     return jsonOk({}, 201);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -91,5 +96,42 @@ export async function POST(req: Request) {
 
     console.error(err);
     return jsonError(ERROR_CODES.INTERNAL_ERROR, 500);
+  }
+}
+
+async function sendVerificationEmail(email: string) {
+  try {
+    const rawToken = makeVerifyToken();
+    const tokenHash = hashVerifyToken(rawToken);
+    const expires = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+
+    // Remove any stale tokens for this address before creating a new one
+    await prisma.verificationToken.deleteMany({ where: { identifier: email } });
+
+    await prisma.verificationToken.create({
+      data: { identifier: email, token: tokenHash, expires },
+    });
+
+    const url = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
+    const resend = getResend();
+
+    if (!resend) {
+      console.warn("[register] RESEND_API_KEY missing. Verify link (dev only):", url);
+      return;
+    }
+
+    await resend.emails.send({
+      from: fromEmail(),
+      to: email,
+      subject: "Verify your Parchment email",
+      html: `
+        <p>Welcome to Parchment!</p>
+        <p><a href="${url}">Click here to verify your email address</a> (valid for 24 hours).</p>
+        <p>If you didn't create an account, you can safely ignore this email.</p>
+      `,
+    });
+  } catch (err) {
+    // Never let email failure affect registration
+    console.error("[register] Failed to send verification email:", err);
   }
 }
