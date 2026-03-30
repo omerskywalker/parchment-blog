@@ -53,6 +53,7 @@ export type PostDetail =
         slug: string;
         contentMd: string;
         publishedAt: string | null;
+        scheduledAt: string | null;
         createdAt: string;
         updatedAt: string;
         tags: string[];
@@ -70,6 +71,7 @@ export type UpdatePostInput = {
   contentMd?: string;
   slug?: string;
   tags?: string[];
+  scheduledAt?: string | null;
 };
 
 export type UpdatePostResponse =
@@ -81,6 +83,7 @@ export type UpdatePostResponse =
         slug: string;
         contentMd: string;
         publishedAt: string | null;
+        scheduledAt: string | null;
         updatedAt: string;
         tags: string[];
       };

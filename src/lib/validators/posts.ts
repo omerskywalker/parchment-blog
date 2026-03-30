@@ -71,6 +71,14 @@ export const updatePostSchema = z
       .optional(),
 
     tags: z.array(tagSchema).max(POST_TAGS_MAX, `Max ${POST_TAGS_MAX} tags.`).optional(),
+
+    // ISO 8601 datetime string — client sends local datetime, server parses as UTC.
+    // Pass null to clear an existing schedule.
+    scheduledAt: z
+      .string()
+      .datetime({ offset: true })
+      .nullable()
+      .optional(),
   })
   .refine((obj) => Object.keys(obj).length > 0, {
     message: "Update payload cannot be empty.",

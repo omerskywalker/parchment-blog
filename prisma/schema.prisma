@@ -43,6 +43,8 @@ model Post {
   authorId String
   author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
+  scheduledAt DateTime?
+
   viewCount Int            @default(0)
   fireCount Int            @default(0)
   reactions PostReaction[]
@@ -50,6 +52,7 @@ model Post {
   @@index([authorId])
   @@index([publishedAt])
   @@index([updatedAt])
+  @@index([scheduledAt])
 }
 
 enum ReactionKind {

@@ -22,6 +22,7 @@ export async function GET(_req: Request, ctx: IdCtx) {
       slug: true,
       contentMd: true,
       publishedAt: true,
+      scheduledAt: true,
       createdAt: true,
       updatedAt: true,
       tags: true,
@@ -59,15 +60,24 @@ export async function PATCH(req: Request, ctx: IdCtx) {
   if (!existing) return jsonError(404, ERROR_CODES.NOT_FOUND, "Post not found.");
 
   try {
+    // Convert scheduledAt string to Date (or null to clear)
+    const updateData = {
+      ...parsed.data,
+      ...(parsed.data.scheduledAt !== undefined
+        ? { scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null }
+        : {}),
+    };
+
     const post = await prisma.post.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
       select: {
         id: true,
         title: true,
         slug: true,
         contentMd: true,
         publishedAt: true,
+        scheduledAt: true,
         updatedAt: true,
         tags: true,
       },
