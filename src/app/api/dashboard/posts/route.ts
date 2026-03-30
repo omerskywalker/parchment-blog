@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db";
 import { z } from "zod";
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
   // 4) find the user (author) by session email
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, autoPublish: true },
   });
 
   if (!user) {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
           slug,
           contentMd,
           authorId: user.id,
-          publishedAt: null,
+          publishedAt: user.autoPublish ? new Date() : null,
           tags: tags ?? [],
         },
         select: {
@@ -83,6 +84,11 @@ export async function POST(req: Request) {
           tags: true,
         },
       });
+
+      if (user.autoPublish) {
+        revalidateTag("public-posts", "default");
+        revalidateTag(`public-post:${post.slug}`, "default");
+      }
 
       return NextResponse.json({ ok: true as const, post }, { status: 201 });
     } catch (err) {

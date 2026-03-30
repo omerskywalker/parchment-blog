@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { createPost } from "@/lib/api/posts";
+import { createPost, setPostPublished } from "@/lib/api/posts";
+import { fetchMyProfile } from "@/lib/api/profile";
 import { qk } from "@/lib/queryKeys";
 import { slugify } from "@/lib/validators/posts";
 import { wordCount } from "@/lib/wordCount";
@@ -14,6 +15,7 @@ import { useLocalDraft } from "@/lib/hooks/useLocalDraft";
 import MarkdownEditor from "@/app/components/editor/MarkdownEditor";
 import TagPillInput from "@/app/components/editor/TagPillInput";
 import Markdown from "@/app/components/Markdown";
+import AutoPublishToast from "@/app/components/AutoPublishToast";
 
 type FormState = {
   title: string;
@@ -35,9 +37,29 @@ export default function NewPostPage() {
 
   const [formError, setFormError] = React.useState<string | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
+  const [autoPublishedPostId, setAutoPublishedPostId] = React.useState<string | null>(null);
 
   const isDirty = form.title !== "" || form.contentMd !== "" || form.slug !== "" || form.tags.length > 0;
   useUnsavedWarning(isDirty);
+
+  // Load user's autoPublish preference
+  const profileQuery = useQuery({
+    queryKey: ["me-profile"],
+    queryFn: fetchMyProfile,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: false,
+  });
+  const autoPublish = profileQuery.data?.ok ? profileQuery.data.user.autoPublish : true;
+
+  const undoPublish = useMutation({
+    mutationFn: (postId: string) => setPostPublished(postId, false),
+    onSuccess: (res, postId) => {
+      if (!res.ok) return;
+      setAutoPublishedPostId(null);
+      router.push(`/dashboard/posts/${postId}/edit`);
+    },
+  });
 
   const mutation = useMutation({
     mutationFn: createPost,
@@ -48,7 +70,14 @@ export default function NewPostPage() {
       }
       await queryClient.invalidateQueries({ queryKey: qk.myPosts() });
       clearDraft();
-      router.push("/dashboard/posts");
+
+      if (data.post.publishedAt) {
+        // Auto-published: show undo toast, then navigate to posts list
+        setAutoPublishedPostId(data.post.id);
+        router.push("/dashboard/posts");
+      } else {
+        router.push("/dashboard/posts");
+      }
     },
     onError: () => {
       setFormError("Something went wrong. Please try again.");
@@ -62,7 +91,6 @@ export default function NewPostPage() {
     form,
     (saved) => {
       setForm((current) => {
-        // Only restore if the form is still blank
         const isEmpty =
           !current.title && !current.contentMd && !current.slug && current.tags.length === 0;
         return isEmpty ? (saved as typeof form) : current;
@@ -105,8 +133,29 @@ export default function NewPostPage() {
 
       <div className="mt-6">
         <h1 className="text-2xl font-semibold tracking-tight text-white">New post</h1>
-        <p className="mt-1 text-sm text-white/50">Create a draft. You can publish later.</p>
+        <p className="mt-1 text-sm text-white/50">
+          {autoPublish
+            ? "Auto-publish is on — your post goes live when you save."
+            : "Create a draft. You can publish later."}
+        </p>
       </div>
+
+      {/* Auto-publish banner */}
+      {autoPublish && (
+        <div className="mt-4 flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-sm text-emerald-200">Auto-publish ON</span>
+            <span className="text-xs text-white/40">— post goes live on save</span>
+          </div>
+          <Link
+            href="/dashboard/profile"
+            className="text-xs text-white/40 underline-offset-2 hover:text-white/60 hover:underline"
+          >
+            Change in profile
+          </Link>
+        </div>
+      )}
 
       <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-6">
         <form onSubmit={onSubmit} className="space-y-5">
@@ -224,11 +273,26 @@ export default function NewPostPage() {
               disabled={mutation.isPending}
               className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {mutation.isPending ? "Creating…" : "Create draft"}
+              {mutation.isPending
+                ? autoPublish
+                  ? "Publishing…"
+                  : "Creating…"
+                : autoPublish
+                  ? "Save & publish"
+                  : "Create draft"}
             </button>
           </div>
         </form>
       </section>
+
+      {/* Undo toast — shown after successful auto-publish, before navigation completes */}
+      {autoPublishedPostId && (
+        <AutoPublishToast
+          postId={autoPublishedPostId}
+          onUndo={() => undoPublish.mutate(autoPublishedPostId)}
+          onDismiss={() => setAutoPublishedPostId(null)}
+        />
+      )}
     </main>
   );
 }

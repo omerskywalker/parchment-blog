@@ -31,7 +31,7 @@ export type CreatePostInput = {
 };
 
 export type CreatePostResponse =
-  | { ok: true; post: { id: string; slug: string } }
+  | { ok: true; post: { id: string; slug: string; publishedAt: string | null } }
   | { ok: false; error: string; message?: string };
 
 export async function createPost(input: CreatePostInput): Promise<CreatePostResponse> {

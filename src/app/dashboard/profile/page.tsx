@@ -36,18 +36,20 @@ export default function ProfilePage() {
   const [bio, setBio] = React.useState("");
   const [avatarKey, setAvatarKey] = React.useState<string | null>(null);
   const [localPreview, setLocalPreview] = React.useState<string | null>(null);
+  const [autoPublish, setAutoPublish] = React.useState(true);
 
   React.useEffect(() => {
     if (me.data?.ok) {
       setUsername(me.data.user.username ?? "");
       setBio(me.data.user.bio ?? "");
       setAvatarKey(me.data.user.avatarKey ?? null);
+      setAutoPublish(me.data.user.autoPublish);
     }
   }, [me.data?.ok]);
 
   const save = useMutation({
     mutationFn: () =>
-      patchMyProfile({ username: username.trim(), bio, avatarKey: avatarKey ?? undefined }),
+      patchMyProfile({ username: username.trim(), bio, avatarKey: avatarKey ?? undefined, autoPublish }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-profile"] });
     },
@@ -191,6 +193,36 @@ export default function ProfilePage() {
                   className="mt-1 w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-white outline-none focus:border-white/30"
                 />
                 <p className="mt-1 text-xs text-white/40">{bio.length}/280</p>
+              </div>
+
+              {/* Publishing preferences */}
+              <div>
+                <p className="text-sm text-white/60">Publishing</p>
+                <div className="mt-2 flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-4 py-3">
+                  <div>
+                    <p className="text-sm text-white/90">Auto-publish new posts</p>
+                    <p className="mt-0.5 text-xs text-white/40">
+                      When on, posts go live immediately on save. Turn off to review drafts first.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={autoPublish}
+                    onClick={() => setAutoPublish((v) => !v)}
+                    className={[
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white/20",
+                      autoPublish ? "bg-emerald-500" : "bg-white/20",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200",
+                        autoPublish ? "translate-x-5" : "translate-x-0",
+                      ].join(" ")}
+                    />
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
