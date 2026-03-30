@@ -138,8 +138,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
         <div className="mt-4 flex flex-col gap-3">
           <TagChips tags={post.tags ?? []} variant="detail" />
 
-          {/* Mobile: 3-column equal width row (Fire | Copy | Share) */}
-          <div className="grid grid-cols-3 gap-2 sm:hidden">
+          {/* Mobile: Fire reaction + share row */}
+          <div className="flex flex-col gap-2 sm:hidden">
             <PostStatsBar
               slug={post.slug}
               initialViewCount={post.viewCount ?? 0}
@@ -149,7 +149,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
               stretch
               className="w-full"
             />
-            <PostShareActions title={post.title} size="sm" layout="grid" className="col-span-2" />
+            <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
           </div>
         </div>
 
