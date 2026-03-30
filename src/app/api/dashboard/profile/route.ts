@@ -18,6 +18,7 @@ const patchSchema = z.object({
     .optional(),
   bio: z.string().max(280).optional(),
   avatarKey: z.string().max(512).optional(),
+  autoPublish: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -27,7 +28,7 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { email },
-    select: { email: true, name: true, username: true, bio: true, avatarKey: true },
+    select: { email: true, name: true, username: true, bio: true, avatarKey: true, autoPublish: true },
   });
 
   if (!user) return jsonError(404, ERROR_CODES.NOT_FOUND, "User not found.");
@@ -52,7 +53,7 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { username, bio, avatarKey } = parsed.data;
+  const { username, bio, avatarKey, autoPublish } = parsed.data;
 
   // normalize username
   const usernameLower = typeof username === "string" ? username.trim().toLowerCase() : undefined;
@@ -64,8 +65,9 @@ export async function PATCH(req: Request) {
         ...(usernameLower !== undefined ? { username: usernameLower } : {}),
         ...(bio !== undefined ? { bio } : {}),
         ...(avatarKey !== undefined ? { avatarKey } : {}),
+        ...(autoPublish !== undefined ? { autoPublish } : {}),
       },
-      select: { email: true, name: true, username: true, bio: true, avatarKey: true },
+      select: { email: true, name: true, username: true, bio: true, avatarKey: true, autoPublish: true },
     });
 
     return NextResponse.json({ ok: true as const, user: updated });

@@ -7,6 +7,7 @@ export type MyProfileResponse =
         username: string | null;
         bio: string | null;
         avatarKey: string | null;
+        autoPublish: boolean;
       };
     }
   | { ok: false; error: string; message?: string };
@@ -20,6 +21,7 @@ export type PatchMyProfileInput = {
   username?: string;
   bio?: string;
   avatarKey?: string;
+  autoPublish?: boolean;
 };
 
 export type PatchMyProfileResponse =
@@ -31,6 +33,7 @@ export type PatchMyProfileResponse =
         username: string | null;
         bio: string | null;
         avatarKey: string | null;
+        autoPublish: boolean;
       };
     }
   | { ok: false; error: string; message?: string };
