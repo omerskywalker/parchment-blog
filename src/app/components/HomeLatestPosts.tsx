@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { PublicPostCard } from "@/lib/server/public-posts";
 import { TagChips } from "@app/components/TagChips";
@@ -31,10 +32,11 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                 <span className="inline-flex items-center gap-2 text-white/70">
                   {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={avatarUrl ?? undefined}
+                    <Image
+                      src={avatarUrl}
                       alt=""
+                      width={24}
+                      height={24}
                       className="h-6 w-6 rounded-full border border-white/10 object-cover"
                     />
                   ) : (

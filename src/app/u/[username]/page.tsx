@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -94,13 +95,13 @@ export default async function PublicProfilePage({ params }: Props) {
       {/* Profile header (visually distinct) */}
       <section className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6">
         <div className="flex items-start gap-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
             {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={avatarUrl}
                 alt={`${displayName} avatar`}
-                className="h-full w-full object-cover"
+                fill
+                className="object-cover"
               />
             ) : (
               <span className="text-xl font-semibold text-white/40 select-none">

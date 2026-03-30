@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import type { PublicPostCard } from "../../lib/server/public-posts";
@@ -282,10 +283,11 @@ export default function PublicPostsFeed({
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                         <span className="inline-flex items-center gap-2 text-white/70">
                           {post.author?.avatarKey ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
+                            <Image
+                              src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
                               alt=""
+                              width={24}
+                              height={24}
                               className="h-6 w-6 rounded-full border border-white/10 object-cover"
                             />
                           ) : (
