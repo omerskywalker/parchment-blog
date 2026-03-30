@@ -8,10 +8,10 @@
     \|__|     \|__|\|__|\|__|\|__|\|_______|\|__|\|__|\|__|\|_______|\|_______|\|__| \|__|    \|__|
 
   B L O G   ·   C O D E   R E V I E W   I M P L E M E N T A T I O N   S T A T U S
-  Last updated: 2026-03-29
+  Last updated: 2026-03-30
 
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  6 open   ║
+║  24-item code review approved 2026-03-28  ·  0 items remaining to build       ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 
@@ -67,6 +67,19 @@
   │ • Replaces window.confirm() on the edit post page               │
   └─────────────────────────────────────────────────────────────────┘
 
+  PR #42  feat/rss-feed
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • GET /rss.xml — valid RSS 2.0 feed of published posts          │
+  │ • <link rel="alternate"> added to layout for autodiscovery      │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #43  feat/brand-and-meta
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Title template "%s · Parchment"                               │
+  │ • Full OpenGraph + Twitter card defaults in layout              │
+  │ • Homepage copy updated to "Write Without Noise" tagline        │
+  └─────────────────────────────────────────────────────────────────┘
+
   PR #44  feat/autosave
   ┌─────────────────────────────────────────────────────────────────┐
   │ • useLocalDraft hook — generic localStorage save/restore        │
@@ -77,52 +90,23 @@
   │   "Saving…" → "Draft saved" status indicator in the form       │
   └─────────────────────────────────────────────────────────────────┘
 
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔍  OPEN — AWAITING REVIEW  (merge in order shown)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  PR #43  feat/brand-and-meta                        ← merge first (no deps)
+  PR #47  feat/code-quality
   ┌─────────────────────────────────────────────────────────────────┐
-  │ • Title: "Parchment — Write Without Noise"                      │
-  │ • Template: "%s · Parchment"                                    │
-  │ • Full OpenGraph + Twitter card defaults                        │
-  │ • Homepage h1 → "Parchment", new two-part tagline               │
-  │ • RSS autodiscovery included (superset of #42's layout change)  │
+  │ • Vitest ^3.2.4; 28 unit tests (wordCount, slugify, queryKeys,  │
+  │   s3) passing in CI                                             │
+  │ • ApiResponse<T> type; ErrorBoundary component                  │
+  │ • pre-push hook runs npm test before every push                 │
   └─────────────────────────────────────────────────────────────────┘
 
-  PR #44  feat/autosave                              ← merge any time (no conflicts)
+  PR #48  feat/performance
   ┌─────────────────────────────────────────────────────────────────┐
-  │ • New post: localStorage draft, restored on mount, cleared      │
-  │   on submit or Cancel                                            │
-  │ • Edit post: debounced PATCH 3s after last keystroke            │
-  │ • Subtle "Saving…" / "Draft saved" indicator in editor          │
+  │ • next/image used in 4 components for optimised delivery        │
+  │ • remotePatterns configured for S3 domain                       │
   └─────────────────────────────────────────────────────────────────┘
 
-  PR #47  feat/code-quality                          ← merge before #48 and #46
+  PR #46  feat/search
   ┌─────────────────────────────────────────────────────────────────┐
-  │ • Vitest ^3.2.4 installed; 28 unit tests pass                   │
-  │     wordCount (7) · slugify (7) · queryKeys (8) · s3 (6)        │
-  │ • ApiResponse<T> generic type in src/lib/types.ts               │
-  │ • ErrorBoundary client component                                │
-  │ • qk factory expanded: publicFeed, publicPost, profile, postStats│
-  │ • .githooks/pre-push runs npm test before every push            │
-  │ • CI: Test step added between Typecheck and Build               │
-  └─────────────────────────────────────────────────────────────────┘
-
-  PR #48  feat/performance                           ← merge after #47
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • next.config.ts: images.remotePatterns for **.amazonaws.com    │
-  │ • 4 components: <img> → <Image> with explicit width/height      │
-  │     HomeLatestPosts · public-posts-feed · [slug] · u/[username] │
-  │ • s3.test.ts: 6 tests for s3PublicUrlFromKey (included in #47's │
-  │   vitest run on CI)                                              │
-  └─────────────────────────────────────────────────────────────────┘
-
-  PR #46  feat/search                                ← merge after #47 and #48
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Postgres full-text via plainto_tsquery (no migration needed)  │
-  │ • GET /api/posts/search?q= — sanitized, ranked by ts_rank       │
+  │ • Postgres full-text via plainto_tsquery                        │
   │ • SearchBar (400ms debounce) + SearchFeed client component      │
   │ • PostsPageClient wires search vs. existing infinite scroll      │
   │ • search.test.ts: 7 tests for sanitizeSearchQuery               │
@@ -130,22 +114,99 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🏗️   TODO — NOT STARTED
+  🔍  OPEN — AWAITING REVIEW
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  feat/auth-polish
+  See MERGE SEQUENCE below for the recommended order.
+
+  PR #49  fix/search-test-expectations
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Corrects 4 wrong test expectations in search.test.ts          │
+  │ • Unblocks CI on all branches that carry this file              │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #50  feat/auto-publish
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • User.autoPublish Boolean (default true) — Prisma migration    │
+  │ • New post: reads profile pref, auto-publishes on submit        │
+  │ • 5-second undo toast after auto-publish                        │
+  │ • Profile page toggle switch under "Publishing" section         │
+  │ • auto-publish.test.ts: 4 unit tests                            │
+  │ ⚠  prisma migrate deploy required                               │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #51  feat/auth-polish
   ┌─────────────────────────────────────────────────────────────────┐
   │ • Email verification via Resend on register                     │
-  │ • Password reset UI polish                                      │
-  │ • OAuth on register page (currently signin-only)                │
+  │     POST /api/auth/send-verification (rate-limited)             │
+  │     GET  /api/auth/verify-email?token= (SHA-256 hash-verified)  │
+  │     /verify-email page — expired / invalid / pending states     │
+  │     VerifyEmailBanner in dashboard (credentials users only)     │
+  │ • email-verify.test.ts: 6 unit tests                            │
   └─────────────────────────────────────────────────────────────────┘
+
+  PR #52  feat/post-settings
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Post.scheduledAt DateTime? — Prisma migration                  │
+  │ • Schedule panel in editor: datetime-local, Set / Clear buttons │
+  │ • Blue "Scheduled" badge; "Publish now" still available         │
+  │ • GET /api/cron/publish-scheduled protected by CRON_SECRET      │
+  │ • vercel.json: cron every 5 minutes                             │
+  │ • scheduled-publish.test.ts: 6 unit tests                       │
+  │ ⚠  prisma migrate deploy required                               │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #53  feat/share-buttons
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Twitter/X share button in PostShareActions                    │
+  │     Opens x.com/intent/tweet with encoded title + URL           │
+  │     X SVG logo; 3-col grid on mobile                            │
+  │ • share.test.ts: 5 unit tests                                   │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #54  feat/email-notifications
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • FireNotification table — idempotent milestone tracking        │
+  │ • Milestones: 5 / 25 / 100 fires; highest pending sent first    │
+  │ • maybeNotifyFireMilestone() — best-effort, never blocks HTTP   │
+  │ • Dark-themed Resend email with "View post →" CTA               │
+  │ • fire-notifications.test.ts: 8 unit tests                      │
+  │ ⚠  prisma migrate deploy required                               │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #55  feat/related-posts
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • getRelatedPosts() — hasSome Postgres query + JS overlap sort  │
+  │ • RelatedPosts server component — 3-col card grid below article │
+  │ • Hidden automatically when no tag overlap exists               │
+  │ • related-posts.test.ts: 7 unit tests                           │
+  └─────────────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📋  MERGE SEQUENCE  (recommended order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Step 1  →  PR #49  fix/search-test-expectations    ← FIRST — fixes CI for all
+  Step 2  →  PR #53  feat/share-buttons              ← no Prisma, no deps
+  Step 3  →  PR #55  feat/related-posts              ← no Prisma, no deps
+  Step 4  →  PR #51  feat/auth-polish                ← no Prisma, safe after #49
+  Step 5  →  PR #50  feat/auto-publish               ← Prisma migration #1
+  Step 6  →  PR #52  feat/post-settings              ← Prisma migration #2 (after #50)
+  Step 7  →  PR #54  feat/email-notifications        ← Prisma migration #3
+
+  Steps 2–4 can be merged in any order or simultaneously.
+  Steps 5–7 each need `prisma migrate deploy` on Vercel after merging.
+  Run migrations sequentially to avoid lock contention.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📊  PROGRESS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Merged  [████████████░░░░░░░░]  6 / 11 branches
-  Open    [████████████░░░░░░░░]  6 / 11 awaiting review
-  Todo    [░░░░░░░░░░░░░░░░░░░░]  1 / 11 not started (auth-polish)
+  Merged  [██████████░░░░░░░░░░]  10 / 17 PRs
+  Open    [████████░░░░░░░░░░░░]   7 / 17 awaiting review
+  Todo    [████████████████████]   0 — nothing left to build
 
+  All 24 original code-review items are shipped across the 7 open PRs.
+  Once those 7 PRs merge, the backlog is fully complete.
