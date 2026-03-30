@@ -8,10 +8,10 @@
     \|__|     \|__|\|__|\|__|\|__|\|_______|\|__|\|__|\|__|\|_______|\|_______|\|__| \|__|    \|__|
 
   B L O G   ·   C O D E   R E V I E W   I M P L E M E N T A T I O N   S T A T U S
-  Last updated: 2026-03-28
+  Last updated: 2026-03-29
 
 ╔══════════════════════════════════════════════════════════════════════════════════╗
-║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  5 open   ║
+║  24-item code review approved 2026-03-28  ·  11 feature branches  ·  6 open   ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 
@@ -79,17 +79,16 @@
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🔍  OPEN — AWAITING REVIEW
+  🔍  OPEN — AWAITING REVIEW  (merge in order shown)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  PR #43  feat/brand-and-meta                        ← merge first
+  PR #43  feat/brand-and-meta                        ← merge first (no deps)
   ┌─────────────────────────────────────────────────────────────────┐
   │ • Title: "Parchment — Write Without Noise"                      │
   │ • Template: "%s · Parchment"                                    │
   │ • Full OpenGraph + Twitter card defaults                        │
   │ • Homepage h1 → "Parchment", new two-part tagline               │
   │ • RSS autodiscovery included (superset of #42's layout change)  │
-  │   NOTE: layout.tsx conflict — accept #43's version              │
   └─────────────────────────────────────────────────────────────────┘
 
   PR #44  feat/autosave                              ← merge any time (no conflicts)
@@ -100,17 +99,39 @@
   │ • Subtle "Saving…" / "Draft saved" indicator in editor          │
   └─────────────────────────────────────────────────────────────────┘
 
+  PR #47  feat/code-quality                          ← merge before #48 and #46
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Vitest ^3.2.4 installed; 28 unit tests pass                   │
+  │     wordCount (7) · slugify (7) · queryKeys (8) · s3 (6)        │
+  │ • ApiResponse<T> generic type in src/lib/types.ts               │
+  │ • ErrorBoundary client component                                │
+  │ • qk factory expanded: publicFeed, publicPost, profile, postStats│
+  │ • .githooks/pre-push runs npm test before every push            │
+  │ • CI: Test step added between Typecheck and Build               │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #48  feat/performance                           ← merge after #47
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • next.config.ts: images.remotePatterns for **.amazonaws.com    │
+  │ • 4 components: <img> → <Image> with explicit width/height      │
+  │     HomeLatestPosts · public-posts-feed · [slug] · u/[username] │
+  │ • s3.test.ts: 6 tests for s3PublicUrlFromKey (included in #47's │
+  │   vitest run on CI)                                              │
+  └─────────────────────────────────────────────────────────────────┘
+
+  PR #46  feat/search                                ← merge after #47 and #48
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ • Postgres full-text via plainto_tsquery (no migration needed)  │
+  │ • GET /api/posts/search?q= — sanitized, ranked by ts_rank       │
+  │ • SearchBar (400ms debounce) + SearchFeed client component      │
+  │ • PostsPageClient wires search vs. existing infinite scroll      │
+  │ • search.test.ts: 7 tests for sanitizeSearchQuery               │
+  └─────────────────────────────────────────────────────────────────┘
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🏗️   TODO — NOT STARTED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  feat/search
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Postgres full-text search via tsvector                        │
-  │ • Migration to add generated tsvector column + GIN index        │
-  │ • Search API route + UI on /posts page                          │
-  └─────────────────────────────────────────────────────────────────┘
 
   feat/auth-polish
   ┌─────────────────────────────────────────────────────────────────┐
@@ -119,33 +140,12 @@
   │ • OAuth on register page (currently signin-only)                │
   └─────────────────────────────────────────────────────────────────┘
 
-  feat/performance  (remaining items)
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Pagination on /posts feed                                     │
-  │ • next/image for all avatar <img> tags                          │
-  └─────────────────────────────────────────────────────────────────┘
-
-  feat/code-quality
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • ApiResponse<T> type (standardise across all routes)           │
-  │ • Error boundaries in client components                         │
-  │ • React Query key factory audit                                 │
-  └─────────────────────────────────────────────────────────────────┘
-
-  feat/brand-and-meta
-  ┌─────────────────────────────────────────────────────────────────┐
-  │ • Homepage copy refresh                                         │
-  │ • OG image redesign — minimal "P" bubble                        │
-  │ • Favicon + global metadata pass                                │
-  └─────────────────────────────────────────────────────────────────┘
-
-
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📊  PROGRESS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Merged  [████████░░░░░░░░░░░░]  3 / 11 branches
-  Open    [██████░░░░░░░░░░░░░░]  3 / 11 awaiting review
-  Todo    [░░░░░░░░░░░░░░░░░░░░]  5 / 11 not started
+  Merged  [████████████░░░░░░░░]  6 / 11 branches
+  Open    [████████████░░░░░░░░]  6 / 11 awaiting review
+  Todo    [░░░░░░░░░░░░░░░░░░░░]  1 / 11 not started (auth-polish)
 

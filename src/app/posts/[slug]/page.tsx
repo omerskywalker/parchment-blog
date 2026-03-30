@@ -1,6 +1,7 @@
 // src/app/posts/[slug]/page.tsx
 export const dynamic = "force-dynamic";
 
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -89,10 +90,11 @@ export default async function PublicPostDetailPage({ params }: Props) {
               className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
             >
               {post.author.avatarKey ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={s3PublicUrlFromKey(post.author.avatarKey) ?? undefined}
+                <Image
+                  src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
                   alt=""
+                  width={32}
+                  height={32}
                   className="h-8 w-8 rounded-full border border-white/10 object-cover"
                 />
               ) : (
