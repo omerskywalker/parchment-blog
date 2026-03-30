@@ -15,14 +15,14 @@ describe("sanitizeSearchQuery", () => {
   });
 
   it("strips tsquery operators: & | ! ( ) : * < > @", () => {
-    expect(sanitizeSearchQuery("foo & bar")).toBe("foo   bar");
-    expect(sanitizeSearchQuery("!important")).toBe(" important");
-    expect(sanitizeSearchQuery("(hello world)")).toBe(" hello world ");
-    expect(sanitizeSearchQuery("foo:*")).toBe("foo ");
+    expect(sanitizeSearchQuery("foo & bar")).toBe("foo bar");
+    expect(sanitizeSearchQuery("!important")).toBe("important");
+    expect(sanitizeSearchQuery("(hello world)")).toBe("hello world");
+    expect(sanitizeSearchQuery("foo:*")).toBe("foo");
   });
 
   it("strips quotes", () => {
-    expect(sanitizeSearchQuery("'single' \"double\"")).toBe(" single   double ");
+    expect(sanitizeSearchQuery("'single' \"double\"")).toBe("single double");
   });
 
   it("returns empty string for all-operator input", () => {

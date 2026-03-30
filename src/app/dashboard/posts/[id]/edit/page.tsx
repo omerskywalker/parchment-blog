@@ -25,6 +25,13 @@ import Markdown from "@/app/components/Markdown";
 import DeleteConfirmModal from "@/app/components/DeleteConfirmModal";
 import { EditorSkeleton } from "@/app/components/skeletons/EditorSkeleton";
 
+/** Convert an ISO 8601 string to the value format required by datetime-local inputs (YYYY-MM-DDTHH:mm). */
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function EditPostPage() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -36,6 +43,9 @@ export default function EditPostPage() {
   const [slug, setSlug] = React.useState("");
   const [contentMd, setContentMd] = React.useState("");
   const [tags, setTags] = React.useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = React.useState<string | null>(null);
+  const [scheduleInput, setScheduleInput] = React.useState(""); // datetime-local value
+  const [showScheduler, setShowScheduler] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
   const [showPreview, setShowPreview] = React.useState(false);
@@ -86,6 +96,11 @@ export default function EditPostPage() {
       setSlug(p.slug);
       setContentMd(p.contentMd);
       setTags(loadedTags);
+      setScheduledAt(p.scheduledAt ?? null);
+      // Pre-fill scheduler input if a schedule already exists
+      if (p.scheduledAt) {
+        setScheduleInput(toDatetimeLocal(p.scheduledAt));
+      }
       setSavedState({
         title: p.title,
         slug: p.slug,
@@ -197,6 +212,20 @@ export default function EditPostPage() {
     },
   });
 
+  const scheduleMutation = useMutation({
+    mutationFn: (isoDate: string | null) =>
+      updatePost(id as string, { scheduledAt: isoDate }),
+    onSuccess: (res) => {
+      if (!res.ok) return setError(res.message ?? "Unable to update schedule.");
+      const next = res.post.scheduledAt ?? null;
+      setScheduledAt(next);
+      if (next) setScheduleInput(toDatetimeLocal(next));
+      setShowScheduler(false);
+      qc.invalidateQueries({ queryKey: qk.post(id as string) });
+    },
+    onError: () => setError("Failed to update schedule."),
+  });
+
   if (!id) {
     return (
       <main className="mx-auto max-w-[845px] px-4 py-10">
@@ -236,8 +265,13 @@ export default function EditPostPage() {
   }
 
   const isPublished = Boolean(data.post.publishedAt);
+  const isScheduled = Boolean(scheduledAt) && !isPublished;
   const wc = wordCount(contentMd);
-  const anyPending = deleteMutation.isPending || publishMutation.isPending || saveMutation.isPending;
+  const anyPending =
+    deleteMutation.isPending ||
+    publishMutation.isPending ||
+    saveMutation.isPending ||
+    scheduleMutation.isPending;
 
   return (
     <main className="mx-auto max-w-[845px] px-4 py-10">
@@ -265,10 +299,14 @@ export default function EditPostPage() {
           <span
             className={[
               "rounded-full px-2.5 py-1 text-xs",
-              isPublished ? "bg-emerald-500/15 text-emerald-200" : "bg-white/10 text-white/70",
+              isPublished
+                ? "bg-emerald-500/15 text-emerald-200"
+                : isScheduled
+                  ? "bg-blue-500/15 text-blue-200"
+                  : "bg-white/10 text-white/70",
             ].join(" ")}
           >
-            {isPublished ? "Published" : "Draft"}
+            {isPublished ? "Published" : isScheduled ? "Scheduled" : "Draft"}
           </span>
 
           {isPublished && data.post.publishedAt ? (
@@ -280,20 +318,85 @@ export default function EditPostPage() {
                 day: "2-digit",
               }).format(new Date(data.post.publishedAt))}
             </p>
+          ) : isScheduled && scheduledAt ? (
+            <p className="text-xs text-white/50">
+              Scheduled for{" "}
+              {new Intl.DateTimeFormat("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              }).format(new Date(scheduledAt))}
+            </p>
           ) : null}
         </div>
 
-        <button
-          onClick={() => {
-            setError(null);
-            publishMutation.mutate(!isPublished);
-          }}
-          disabled={anyPending}
-          className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
-        >
-          {publishMutation.isPending ? "Updating…" : isPublished ? "Unpublish" : "Publish"}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Schedule toggle — only for unpublished posts */}
+          {!isPublished && (
+            <button
+              type="button"
+              onClick={() => setShowScheduler((v) => !v)}
+              disabled={anyPending}
+              className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/10 disabled:opacity-60"
+            >
+              {isScheduled ? "Edit schedule" : "Schedule"}
+            </button>
+          )}
+
+          <button
+            onClick={() => {
+              setError(null);
+              publishMutation.mutate(!isPublished);
+            }}
+            disabled={anyPending}
+            className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
+          >
+            {publishMutation.isPending ? "Updating…" : isPublished ? "Unpublish" : "Publish now"}
+          </button>
+        </div>
       </div>
+
+      {/* Schedule panel — only for unpublished posts */}
+      {showScheduler && !isPublished && (
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
+          <div>
+            <label className="text-xs text-white/60">Publish at</label>
+            <input
+              type="datetime-local"
+              value={scheduleInput}
+              onChange={(e) => setScheduleInput(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="mt-1 block rounded-md border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30"
+            />
+          </div>
+          <div className="flex items-center gap-2 pb-0.5">
+            <button
+              type="button"
+              disabled={scheduleMutation.isPending || !scheduleInput}
+              onClick={() => {
+                if (!scheduleInput) return;
+                // Convert local datetime to ISO string
+                scheduleMutation.mutate(new Date(scheduleInput).toISOString());
+              }}
+              className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 disabled:opacity-60"
+            >
+              {scheduleMutation.isPending ? "Saving…" : "Set schedule"}
+            </button>
+            {isScheduled && (
+              <button
+                type="button"
+                disabled={scheduleMutation.isPending}
+                onClick={() => scheduleMutation.mutate(null)}
+                className="rounded-md px-3 py-1.5 text-sm text-white/50 hover:text-white/80 disabled:opacity-60"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <section className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 sm:p-6">
         <form
