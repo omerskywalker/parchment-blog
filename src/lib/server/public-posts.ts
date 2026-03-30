@@ -139,6 +139,54 @@ export async function getPublicPostsPage(args: {
 }
 
 /* ============================================================
+   related posts by tag overlap (up to `limit`, excludes current post)
+============================================================ */
+
+export async function getRelatedPosts(
+  currentSlug: string,
+  tags: string[],
+  limit = 3,
+): Promise<PublicPostCard[]> {
+  if (!tags.length) return [];
+
+  const rows = await prisma.post.findMany({
+    where: {
+      publishedAt: { not: null },
+      slug: { not: currentSlug },
+      tags: { hasSome: tags },
+    },
+    orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+    take: limit * 4, // fetch extra so we can re-sort by overlap count in JS
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      publishedAt: true,
+      updatedAt: true,
+      contentMd: true,
+      viewCount: true,
+      author: { select: { name: true, username: true, avatarKey: true } },
+      tags: true,
+    },
+  });
+
+  const withScore = rows.map(({ contentMd, ...p }) => ({
+    post: {
+      ...p,
+      publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+      updatedAt: p.updatedAt.toISOString(),
+      readingTimeMin: estimateReadingTimeMinutes(contentMd),
+      viewCount: p.viewCount ?? 0,
+    },
+    score: p.tags.filter((t) => tags.includes(t)).length,
+  }));
+
+  withScore.sort((a, b) => b.score - a.score);
+
+  return withScore.slice(0, limit).map((x) => x.post);
+}
+
+/* ============================================================
    public post detail by slug (published only)
 ============================================================ */
 
