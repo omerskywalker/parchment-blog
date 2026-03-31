@@ -26,14 +26,19 @@ export async function GET() {
   const email = session?.user?.email;
   if (!email) return jsonError(401, ERROR_CODES.UNAUTHORIZED, "You must be signed in.");
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { email: true, name: true, username: true, bio: true, avatarKey: true, autoPublish: true },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { email: true, name: true, username: true, bio: true, avatarKey: true, autoPublish: true },
+    });
 
-  if (!user) return jsonError(404, ERROR_CODES.NOT_FOUND, "User not found.");
+    if (!user) return jsonError(404, ERROR_CODES.NOT_FOUND, "User not found.");
 
-  return NextResponse.json({ ok: true as const, user });
+    return NextResponse.json({ ok: true as const, user });
+  } catch (err) {
+    console.error("[profile GET]", err);
+    return jsonError(500, ERROR_CODES.INTERNAL_ERROR, "Failed to load profile.");
+  }
 }
 
 export async function PATCH(req: Request) {
