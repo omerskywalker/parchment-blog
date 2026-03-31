@@ -187,6 +187,56 @@ export async function getRelatedPosts(
 }
 
 /* ============================================================
+   adjacent posts for prev/next navigation
+   - queries by createdAt, same-author first then global fallback
+============================================================ */
+
+export type AdjacentPost = { title: string; slug: string };
+export type AdjacentPosts = { prev: AdjacentPost | null; next: AdjacentPost | null };
+
+const adjacentSelect = { title: true, slug: true } as const;
+
+async function queryAdjacent(
+  createdAt: Date,
+  direction: "prev" | "next",
+  authorId: string,
+): Promise<AdjacentPost | null> {
+  const filter = direction === "prev" ? { lt: createdAt } : { gt: createdAt };
+  const order = direction === "prev" ? ("desc" as const) : ("asc" as const);
+
+  // 1) Try same-author first
+  const sameAuthor = await prisma.post.findFirst({
+    where: { publishedAt: { not: null }, authorId, createdAt: filter },
+    orderBy: { createdAt: order },
+    select: adjacentSelect,
+  });
+  if (sameAuthor) return sameAuthor;
+
+  // 2) Global fallback
+  return prisma.post.findFirst({
+    where: { publishedAt: { not: null }, NOT: { authorId }, createdAt: filter },
+    orderBy: { createdAt: order },
+    select: adjacentSelect,
+  });
+}
+
+export async function getAdjacentPosts(slug: string): Promise<AdjacentPosts> {
+  const current = await prisma.post.findFirst({
+    where: { slug, publishedAt: { not: null } },
+    select: { createdAt: true, authorId: true },
+  });
+
+  if (!current) return { prev: null, next: null };
+
+  const [prev, next] = await Promise.all([
+    queryAdjacent(current.createdAt, "prev", current.authorId),
+    queryAdjacent(current.createdAt, "next", current.authorId),
+  ]);
+
+  return { prev, next };
+}
+
+/* ============================================================
    public post detail by slug (published only)
 ============================================================ */
 
