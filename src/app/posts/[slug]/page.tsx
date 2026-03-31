@@ -19,6 +19,43 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+const PLATFORM_DESCRIPTION =
+  "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.";
+
+/** Extracts a plain-text description from the first paragraph of markdown content. */
+function extractDescription(markdown: string): string {
+  // Split into blocks separated by blank lines
+  const blocks = markdown.split(/\n\s*\n/);
+
+  for (const block of blocks) {
+    const stripped = block
+      .trim()
+      // Remove headings
+      .replace(/^#{1,6}\s+/gm, "")
+      // Remove images
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+      // Remove links — keep display text
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      // Remove bold/italic/strikethrough
+      .replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, "$2")
+      // Remove inline code
+      .replace(/`[^`]+`/g, "")
+      // Remove blockquote markers
+      .replace(/^>\s+/gm, "")
+      // Remove horizontal rules
+      .replace(/^[-*_]{3,}\s*$/gm, "")
+      // Collapse whitespace
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (stripped.length > 20) {
+      return stripped.length > 155 ? stripped.slice(0, 152) + "..." : stripped;
+    }
+  }
+
+  return PLATFORM_DESCRIPTION;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
 
@@ -26,12 +63,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: "Post not found" };
 
   const ogUrl = `/posts/${post.slug}/opengraph-image`;
+  const description = extractDescription(post.contentMd);
 
   return {
     title: post.title,
+    description,
     alternates: { canonical: `/posts/${post.slug}` },
     openGraph: {
       title: post.title,
+      description,
       type: "article",
       url: `/posts/${post.slug}`,
       images: [{ url: ogUrl, width: 1200, height: 630 }],
@@ -39,6 +79,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: post.title,
+      description,
       images: [ogUrl],
     },
   };
