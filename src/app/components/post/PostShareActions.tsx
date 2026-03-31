@@ -83,7 +83,7 @@ export function PostShareActions({ title, className, size = "md", layout = "inli
   return (
     <div className={cx(wrapperClass, className)}>
       {/* Copy link */}
-      <button type="button" onClick={copyLink} className={cx(baseBtn, copyWidth)}>
+      <button type="button" onClick={copyLink} aria-label="Copy link" className={cx(baseBtn, copyWidth)}>
         <span
           aria-hidden="true"
           className={cx(
@@ -118,6 +118,7 @@ export function PostShareActions({ title, className, size = "md", layout = "inli
       <button
         type="button"
         onClick={share}
+        aria-label="Share post"
         className={cx(baseBtn, layout === "grid" ? "w-full" : "")}
       >
         <span aria-hidden="true" className="opacity-90">
