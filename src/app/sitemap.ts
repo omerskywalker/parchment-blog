@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/db";
 
+// Force dynamic so Next.js doesn't try to prerender this at build time
+// (build env has no real DB — sitemap is generated fresh on each request)
+export const dynamic = "force-dynamic";
+
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
