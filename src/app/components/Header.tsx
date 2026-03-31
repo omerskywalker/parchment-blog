@@ -134,6 +134,7 @@ export default function Header() {
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
+            aria-controls="mobile-nav"
             onClick={() => setOpen((v) => !v)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/15 text-white/90 hover:bg-[rgba(127,127,127,0.12)]"
           >
@@ -142,6 +143,7 @@ export default function Header() {
 
           {/* Dropdown (kept mounted for smooth exit) */}
           <div
+            id="mobile-nav"
             ref={menuRef}
             className={[
               "absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-black/95 shadow-lg",

@@ -160,6 +160,7 @@ export default function PostStatsBar({
           firedByMe ? fired : neutral,
         )}
         aria-pressed={firedByMe}
+        aria-label={firedByMe ? "Remove reaction" : "React to this post"}
       >
         <span className={cx("transition-transform duration-200", firedByMe ? "scale-[1.06]" : "")}>
           🔥
