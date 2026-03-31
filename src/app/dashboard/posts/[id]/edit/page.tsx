@@ -25,11 +25,9 @@ import Markdown from "@/app/components/Markdown";
 import DeleteConfirmModal from "@/app/components/DeleteConfirmModal";
 import { EditorSkeleton } from "@/app/components/skeletons/EditorSkeleton";
 
-/** Convert an ISO 8601 string to the value format required by datetime-local inputs (YYYY-MM-DDTHH:mm). */
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** Extract the YYYY-MM-DD portion from a stored UTC ISO string for a date input. */
+function toDateInput(iso: string): string {
+  return iso.slice(0, 10);
 }
 
 export default function EditPostPage() {
@@ -44,7 +42,7 @@ export default function EditPostPage() {
   const [contentMd, setContentMd] = React.useState("");
   const [tags, setTags] = React.useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = React.useState<string | null>(null);
-  const [scheduleInput, setScheduleInput] = React.useState(""); // datetime-local value
+  const [scheduleInput, setScheduleInput] = React.useState(""); // date input value (YYYY-MM-DD)
   const [showScheduler, setShowScheduler] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
@@ -99,7 +97,7 @@ export default function EditPostPage() {
       setScheduledAt(p.scheduledAt ?? null);
       // Pre-fill scheduler input if a schedule already exists
       if (p.scheduledAt) {
-        setScheduleInput(toDatetimeLocal(p.scheduledAt));
+        setScheduleInput(toDateInput(p.scheduledAt));
       }
       setSavedState({
         title: p.title,
@@ -219,7 +217,7 @@ export default function EditPostPage() {
       if (!res.ok) return setError(res.message ?? "Unable to update schedule.");
       const next = res.post.scheduledAt ?? null;
       setScheduledAt(next);
-      if (next) setScheduleInput(toDatetimeLocal(next));
+      if (next) setScheduleInput(toDateInput(next));
       setShowScheduler(false);
       qc.invalidateQueries({ queryKey: qk.post(id as string) });
     },
@@ -325,8 +323,7 @@ export default function EditPostPage() {
                 year: "numeric",
                 month: "short",
                 day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
+                timeZone: "UTC",
               }).format(new Date(scheduledAt))}
             </p>
           ) : null}
@@ -362,14 +359,15 @@ export default function EditPostPage() {
       {showScheduler && !isPublished && (
         <div className="mt-3 flex flex-wrap items-end gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3">
           <div>
-            <label className="text-xs text-white/60">Publish at</label>
+            <label className="text-xs text-white/60">Publish date</label>
             <input
-              type="datetime-local"
+              type="date"
               value={scheduleInput}
               onChange={(e) => setScheduleInput(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+              min={new Date().toISOString().slice(0, 10)}
               className="mt-1 block rounded-md border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30"
             />
+            <p className="mt-1.5 text-xs text-white/40">Posts go live at 9 AM UTC on the selected date.</p>
           </div>
           <div className="flex items-center gap-2 pb-0.5">
             <button
@@ -377,8 +375,8 @@ export default function EditPostPage() {
               disabled={scheduleMutation.isPending || !scheduleInput}
               onClick={() => {
                 if (!scheduleInput) return;
-                // Convert local datetime to ISO string
-                scheduleMutation.mutate(new Date(scheduleInput).toISOString());
+                // Store as 9 AM UTC on the chosen date (matches daily cron schedule)
+                scheduleMutation.mutate(`${scheduleInput}T09:00:00.000Z`);
               }}
               className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-sm text-white/90 disabled:opacity-60"
             >
