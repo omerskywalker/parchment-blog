@@ -12,6 +12,14 @@ Minimalist blogging platform. Next.js 16 App Router · React 19 · TypeScript (s
 - After each batch of changes: update `IMPLEMENTATION_STATUS.md` and summarize what was done.
 - GitHub handle: omerskywalker
 
+## Definition of Done — Required Before Marking Any PR Complete
+A feature or PR is **not complete** until all of the following pass:
+1. **`npm test`** — all vitest tests green (pre-push hook enforces this, but verify explicitly)
+2. **GitHub Actions CI** — build + lint + test checks must all pass (green ✓) on the PR
+3. **Vercel preview deployment** — the Vercel preview deploy for the PR branch must succeed
+
+If any pipeline is failing, investigate and fix before marking the PR complete. Document blockers that require external action (env vars, plan upgrades, etc.) clearly in the PR description and in `PHASE_2_STATUS.md`.
+
 ## Active Work: 24-Item Code Review Implementation
 
 A full code review was completed on 2026-03-28. All 24 improvements were approved. Implementation is in progress via 11 feature branches:
