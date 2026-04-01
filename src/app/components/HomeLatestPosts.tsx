@@ -27,7 +27,7 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
             className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 hover:bg-black/50"
           >
             <div className="min-w-0">
-              <h3 className="truncate text-base font-medium text-white">{p.title}</h3>
+              <h3 className="line-clamp-2 text-base font-medium text-white">{p.title}</h3>
 
               <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                 <span className="inline-flex items-center gap-2 text-white/70">
@@ -44,6 +44,23 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
                   )}
                   <span className="truncate">{authorName}</span>
                 </span>
+
+                {p.publishedAt && (
+                  <>
+                    <span className="text-white/20">·</span>
+                    <span>
+                      {new Intl.DateTimeFormat("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }).format(new Date(p.publishedAt))}
+                    </span>
+                  </>
+                )}
+
+                <span className="text-white/20">·</span>
+
+                <span>{p.readingTimeMin ?? 1} min read</span>
 
                 <span className="text-white/20">·</span>
 
