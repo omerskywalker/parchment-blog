@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  <!-- Parchment — P mark -->
+  <!-- Dark background with warm rounded square -->
+  <rect width="100" height="100" rx="22" fill="#0d0d0c"/>
+  <rect x="1.5" y="1.5" width="97" height="97" rx="20.5" fill="none" stroke="#2a2215" stroke-width="1"/>
+
+  <!-- P letterform — evenodd creates the counter (inner hole of the bowl) -->
+  <!-- Stem: x 25–35, full height 18–82                                    -->
+  <!-- Bowl: D-shape from y 18–54, arcing out to x 75 at midpoint y 36    -->
+  <!-- Counter: inset 9px from bowl edges                                  -->
+  <path
+    fill-rule="evenodd"
+    fill="#dbbe84"
+    d="M 25 18
+       L 61 18
+       Q 75 18 75 36
+       Q 75 54 61 54
+       L 35 54
+       L 35 82
+       L 25 82
+       Z
+       M 35 27
+       L 59 27
+       Q 66 27 66 36
+       Q 66 45 59 45
+       L 35 45
+       Z"
+  />
+</svg>

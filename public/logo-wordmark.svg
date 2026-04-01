@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 88" width="600" height="176">
+  <!-- Parchment — wordmark (P mark + logotype) -->
+  <rect width="300" height="88" rx="16" fill="#0d0d0c"/>
+  <rect x="1" y="1" width="298" height="86" rx="15" fill="none" stroke="#2a2215" stroke-width="1"/>
+
+  <!-- P mark, scaled to 72px with 8px padding -->
+  <!-- scale(0.72) applied: mark occupies ~x 26–62, y 21–67 -->
+  <g transform="translate(8, 8) scale(0.72)">
+    <path
+      fill-rule="evenodd"
+      fill="#dbbe84"
+      d="M 25 18
+         L 61 18
+         Q 75 18 75 36
+         Q 75 54 61 54
+         L 35 54
+         L 35 82
+         L 25 82
+         Z
+         M 35 27
+         L 59 27
+         Q 66 27 66 36
+         Q 66 45 59 45
+         L 35 45
+         Z"
+    />
+  </g>
+
+  <!-- Vertical separator -->
+  <line x1="74" y1="22" x2="74" y2="66" stroke="#2a2215" stroke-width="1"/>
+
+  <!-- "Parchment" logotype -->
+  <text
+    x="86"
+    y="53"
+    fill="#dbbe84"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="26"
+    letter-spacing="1.5"
+    font-weight="400"
+  >Parchment</text>
+</svg>
