@@ -18,20 +18,15 @@ const geistMono = Geist_Mono({
 });
 
 function getBaseUrl() {
-  // 1) Explicit production URL (set in Vercel env vars → always resolves to prod domain)
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) return siteUrl;
+  // 1) Prefer an explicit env you control
+  const explicit = process.env.NEXT_PUBLIC_APP_URL;
+  if (explicit) return explicit;
 
-  // 2) Legacy explicit env
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (appUrl) return appUrl;
-
-  // 3) Vercel provides this automatically — but it resolves to the preview domain
-  //    on preview deployments, so prefer NEXT_PUBLIC_SITE_URL above for canonical URLs
+  // 2) Vercel provides this automatically in prod/preview
   const vercel = process.env.VERCEL_URL;
   if (vercel) return `https://${vercel}`;
 
-  // 4) Local dev fallback
+  // 3) Local dev fallback
   return "http://localhost:3000";
 }
 
@@ -61,6 +56,11 @@ export const metadata: Metadata = {
     title: "Parchment — Write Without Noise",
     description:
       "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
+  },
+
+  icons: {
+    icon: "/parchment-logo.png",
+    apple: "/parchment-logo.png",
   },
 
   alternates: {
