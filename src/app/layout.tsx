@@ -59,8 +59,8 @@ export const metadata: Metadata = {
   },
 
   icons: {
-    icon: "/parchment-logo.png",
-    apple: "/parchment-logo.png",
+    icon: "/parchment-logo.jpg",
+    apple: "/parchment-logo.jpg",
   },
 
   alternates: {
