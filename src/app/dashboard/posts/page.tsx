@@ -1,12 +1,22 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchMyPosts } from "@/lib/api/posts";
 import { qk } from "@/lib/queryKeys";
 import { PostListSkeleton } from "@/app/components/skeletons/PostListSkeleton";
+import { sortMyPosts, type PostSortKey } from "@/lib/sortMyPosts";
+
+const SORT_LABELS: Record<PostSortKey, string> = {
+  date: "Recent",
+  views: "Most views",
+  fires: "Most fires",
+};
 
 export default function MyPostsPage() {
+  const [sortBy, setSortBy] = React.useState<PostSortKey>("date");
+
   const { data, isPending, isError } = useQuery({
     queryKey: qk.myPosts(),
     queryFn: fetchMyPosts,
@@ -14,6 +24,11 @@ export default function MyPostsPage() {
     gcTime: 5 * 60_000,
     retry: false,
   });
+
+  const sortedPosts = React.useMemo(() => {
+    if (!data?.ok) return [];
+    return sortMyPosts(data.posts, sortBy);
+  }, [data, sortBy]);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
@@ -59,25 +74,56 @@ export default function MyPostsPage() {
             </Link>
           </div>
         ) : (
-          <ul className="space-y-3">
-            {data.posts.map((post) => {
-              return (
-                <Link
-                  key={post.id + post.publishedAt}
-                  href={`/dashboard/posts/${post.id}/edit`}
-                  className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:border-white hover:bg-black/50"
+          <>
+            {/* sort controls */}
+            <div className="mb-3 flex items-center gap-1.5">
+              <span className="mr-1 text-xs text-white/40">Sort:</span>
+              {(Object.keys(SORT_LABELS) as PostSortKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSortBy(key)}
+                  className={[
+                    "rounded-md px-2.5 py-1 text-xs transition-colors",
+                    sortBy === key
+                      ? "bg-white/10 text-white"
+                      : "text-white/45 hover:text-white/70",
+                  ].join(" ")}
                 >
-                  <li key={post.id} className="">
+                  {SORT_LABELS[key]}
+                </button>
+              ))}
+            </div>
+
+            <ul className="space-y-3">
+              {sortedPosts.map((post) => (
+                <li key={post.id + post.publishedAt}>
+                  <Link
+                    href={`/dashboard/posts/${post.id}/edit`}
+                    className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:border-white/20 hover:bg-black/50"
+                  >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-base font-medium text-white">{post.title}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-medium text-white">{post.title}</p>
                         <p className="mt-1 text-sm text-white/50">/posts/{post.slug}</p>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex shrink-0 items-center gap-3">
+                        {/* stats */}
+                        <span className="flex items-center gap-2.5 text-xs text-white/40">
+                          <span className="inline-flex items-center gap-1">
+                            <span>👁</span>
+                            <span className="tabular-nums">{post.viewCount}</span>
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <span>🔥</span>
+                            <span className="tabular-nums">{post.fireCount}</span>
+                          </span>
+                        </span>
+
                         <span
                           className={[
-                            "shrink-0 rounded-full px-2.5 py-1 text-xs",
+                            "rounded-full px-2.5 py-1 text-xs",
                             post.publishedAt
                               ? "bg-emerald-500/15 text-emerald-200"
                               : "bg-white/10 text-white/70",
@@ -87,11 +133,11 @@ export default function MyPostsPage() {
                         </span>
                       </div>
                     </div>
-                  </li>
-                </Link>
-              );
-            })}
-          </ul>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </main>

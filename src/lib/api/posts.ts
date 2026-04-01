@@ -9,6 +9,8 @@ export type MyPostsResponse =
         createdAt: string;
         updatedAt: string;
         tags: string[];
+        viewCount: number;
+        fireCount: number;
       }>;
     }
   | { ok: false; error: string; message?: string };
