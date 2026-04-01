@@ -14,6 +14,7 @@ import { PostShareActions } from "@app/components/post/PostShareActions";
 import { RelatedPosts } from "@app/components/post/RelatedPosts";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 import PostViewsInline from "@app/components/post/PostViewsInline";
+import { ReadingProgressBar } from "@app/components/post/ReadingProgressBar";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -51,6 +52,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
   if (!post) notFound();
 
   return (
+    <>
+    <ReadingProgressBar />
     <main className="mx-auto max-w-[845px] px-4 py-10">
       {/* top nav row (outside card) */}
       <div className="flex items-center justify-between gap-4">
@@ -164,5 +167,6 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
       <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
     </main>
+    </>
   );
 }
