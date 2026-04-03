@@ -53,3 +53,7 @@ prisma/dev.db-journal
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Planning/context docs — local only, not committed to repo
+*.md
+!README.md
