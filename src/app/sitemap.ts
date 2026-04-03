@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const BASE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
-  "https://parchment-blog.vercel.app";
+  "https://parchment.blog";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = await prisma.post.findMany({
