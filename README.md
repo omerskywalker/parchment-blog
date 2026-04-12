@@ -4,7 +4,7 @@
 
 Built with a production-grade architecture: server-first rendering, typed end-to-end, real-time social signals, full-text search, and a distraction-free markdown editor.
 
-**Live:** [parchment-blog.vercel.app](https://parchment-blog.vercel.app)
+**Live:** [parchment.blog](https://parchment.blog)
 
 ---
 
@@ -61,7 +61,7 @@ The reader sees your post. The writer sees a markdown editor. Everything else â€
 - **Dynamic OpenGraph images** (1200Ã—630) generated per post â€” includes title, author avatar, fire count, view count, and reading time
 - Twitter / X `summary_large_image` card
 - Meta description extracted from the first paragraph of post content
-- Canonical URL pinned via `NEXT_PUBLIC_SITE_URL`
+- Canonical URL pinned via `NEXT_PUBLIC_SITE_URL` (set to `https://parchment.blog` in production)
 - **RSS feed** at `/rss.xml` â€” 50 latest posts, standard RSS 2.0 with Atom self-link and category tags
 - **XML sitemap** at `/sitemap.xml` covering all published posts and static routes
 - Reading time estimation (~200 words/minute)
@@ -82,7 +82,7 @@ The reader sees your post. The writer sees a markdown editor. Everything else â€
 ### Performance & Observability
 - `unstable_cache` on public post feeds â€” 60-second revalidation, on-demand tag invalidation on publish
 - Cursor-based pagination for efficient large-dataset queries
-- **Vercel Analytics** and **Speed Insights**
+- **Vercel Analytics**
 - **Sentry** error tracking (server and edge)
 
 ---
@@ -139,7 +139,7 @@ The reader sees your post. The writer sees a markdown editor. Everything else â€
 | **Resend** | Transactional email (verification, password reset, fire notifications) |
 | **Sentry** (`@sentry/nextjs`) | Error tracking |
 | **Vercel** | Hosting, preview deployments, cron jobs |
-| **Vercel Analytics / Speed Insights** | Performance and traffic observability |
+| **Vercel Analytics** | Performance and traffic observability |
 
 ### Testing & Tooling
 | Technology | Purpose |
