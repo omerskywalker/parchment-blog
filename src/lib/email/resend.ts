@@ -1,7 +1,22 @@
 import { Resend } from "resend";
 
+function normalizeBaseUrl(url: string) {
+  return url.replace(/\/$/, "");
+}
+
 export function appUrl() {
-  return process.env.APP_URL ?? "http://localhost:3000";
+  const explicit =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXTAUTH_URL ??
+    process.env.APP_URL;
+
+  if (explicit) return normalizeBaseUrl(explicit);
+
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) return `https://${normalizeBaseUrl(vercelUrl)}`;
+
+  return "http://localhost:3000";
 }
 
 export function fromEmail() {

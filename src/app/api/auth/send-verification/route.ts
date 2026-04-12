@@ -43,7 +43,7 @@ export async function POST() {
     },
   });
 
-  const url = `${appUrl()}/verify-email?token=${encodeURIComponent(rawToken)}`;
+  const url = `${appUrl()}/api/auth/verify-email?token=${encodeURIComponent(rawToken)}`;
 
   const resend = getResend();
 

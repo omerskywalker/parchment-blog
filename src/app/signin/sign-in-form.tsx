@@ -6,6 +6,11 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { OAuthButtons } from "../components/auth/oauth-buttons";
 
+type OAuthProviders = {
+  google: boolean;
+  github: boolean;
+};
+
 function prettyAuthError(code: string | null) {
   if (!code) return null;
 
@@ -26,7 +31,13 @@ function prettyAuthError(code: string | null) {
   return "Sign-in failed. Please try again.";
 }
 
-export default function SignInForm({ next }: { next: string }) {
+export default function SignInForm({
+  next,
+  oauthProviders,
+}: {
+  next: string;
+  oauthProviders: OAuthProviders;
+}) {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -92,7 +103,7 @@ export default function SignInForm({ next }: { next: string }) {
           {bannerMessage}
         </div>
 
-        <OAuthButtons callbackUrl={callbackUrl} />
+        <OAuthButtons callbackUrl={callbackUrl} providers={oauthProviders} />
 
         <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div>
