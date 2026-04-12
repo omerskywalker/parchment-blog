@@ -7,11 +7,22 @@ import { signIn, getSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { OAuthButtons } from "../components/auth/oauth-buttons";
 
+type OAuthProviders = {
+  google: boolean;
+  github: boolean;
+};
+
 type ApiOk = { ok: true };
 type ApiErr = { ok: false; error: string; message?: string; issues?: unknown };
 type ApiResponse = ApiOk | ApiErr;
 
-export default function RegisterForm({ next }: { next: string }) {
+export default function RegisterForm({
+  next,
+  oauthProviders,
+}: {
+  next: string;
+  oauthProviders: OAuthProviders;
+}) {
   const router = useRouter();
   const qc = useQueryClient();
 
@@ -104,7 +115,7 @@ export default function RegisterForm({ next }: { next: string }) {
         <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
         <p className="mt-1 text-sm text-[rgb(var(--muted))]">Register to start posting.</p>
 
-        <OAuthButtons callbackUrl={callbackUrl} />
+        <OAuthButtons callbackUrl={callbackUrl} providers={oauthProviders} />
 
         <form onSubmit={onSubmit} className="mt-4 space-y-4">
           <div>
