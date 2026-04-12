@@ -14,7 +14,10 @@ const patchSchema = z.object({
     .trim()
     .min(3)
     .max(32)
-    .regex(/^[a-z0-9_]+$/i, "Username can only contain letters, numbers, and underscores.")
+    .regex(
+      /^[a-z0-9_-]+$/i,
+      "Username can only contain letters, numbers, underscores, and hyphens.",
+    )
     .optional(),
   bio: z.string().max(280).optional(),
   avatarKey: z.string().max(512).optional(),
