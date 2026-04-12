@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createPost, setPostPublished } from "@/lib/api/posts";
 import { fetchMyProfile } from "@/lib/api/profile";
 import { qk } from "@/lib/queryKeys";
+import { hasNewPostDraftContent } from "@/lib/drafts";
 import { slugify } from "@/lib/validators/posts";
 import { wordCount } from "@/lib/wordCount";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
@@ -38,8 +39,9 @@ export default function NewPostPage() {
   const [formError, setFormError] = React.useState<string | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
   const [autoPublishedPostId, setAutoPublishedPostId] = React.useState<string | null>(null);
+  const [showRecoveredDraft, setShowRecoveredDraft] = React.useState(false);
 
-  const isDirty = form.title !== "" || form.contentMd !== "" || form.slug !== "" || form.tags.length > 0;
+  const isDirty = hasNewPostDraftContent(form);
   useUnsavedWarning(isDirty);
 
   // Load user's autoPublish preference
@@ -91,9 +93,15 @@ export default function NewPostPage() {
     form,
     (saved) => {
       setForm((current) => {
-        const isEmpty =
-          !current.title && !current.contentMd && !current.slug && current.tags.length === 0;
-        return isEmpty ? (saved as typeof form) : current;
+        const isEmpty = !hasNewPostDraftContent(current);
+        const restoredDraft = saved as typeof form;
+
+        if (isEmpty && hasNewPostDraftContent(restoredDraft)) {
+          setShowRecoveredDraft(true);
+          return restoredDraft;
+        }
+
+        return current;
       });
     },
   );
@@ -154,6 +162,43 @@ export default function NewPostPage() {
           >
             Change in profile
           </Link>
+        </div>
+      )}
+
+      {showRecoveredDraft && (
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-sky-500/20 bg-sky-500/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-sky-100">Recovered your unsaved draft</p>
+            <p className="mt-1 text-xs text-white/50">
+              We restored the last draft saved in this browser for this new-post page.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowRecoveredDraft(false)}
+              className="rounded-md border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-white/85 transition-colors hover:bg-white/15"
+            >
+              Keep draft
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm({
+                  title: "",
+                  contentMd: "",
+                  slug: "",
+                  tags: [],
+                });
+                clearDraft();
+                setShowRecoveredDraft(false);
+              }}
+              className="rounded-md px-3 py-1.5 text-xs text-white/55 transition-colors hover:text-white/80"
+            >
+              Discard
+            </button>
+          </div>
         </div>
       )}
 
