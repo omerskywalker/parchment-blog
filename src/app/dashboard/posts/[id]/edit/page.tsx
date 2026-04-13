@@ -16,6 +16,7 @@ import {
   PostDetail,
 } from "@/lib/api/posts";
 import { wordCount } from "@/lib/wordCount";
+import { formatAutoSaveStatus, type AutoSaveStatus } from "@/lib/editorStatus";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 
@@ -45,7 +46,8 @@ export default function EditPostPage() {
   const [scheduleInput, setScheduleInput] = React.useState(""); // date input value (YYYY-MM-DD)
   const [showScheduler, setShowScheduler] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [autoSaveStatus, setAutoSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
+  const [autoSaveStatus, setAutoSaveStatus] = React.useState<AutoSaveStatus>("idle");
+  const [lastAutoSavedAt, setLastAutoSavedAt] = React.useState<Date | null>(null);
   const [showPreview, setShowPreview] = React.useState(false);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
 
@@ -140,10 +142,11 @@ export default function EditPostPage() {
     onSuccess: (res) => {
       if (res.ok) {
         setAutoSaveStatus("saved");
+        setLastAutoSavedAt(new Date());
         setSavedState({ title: title.trim(), slug: slug.trim(), contentMd, tags: JSON.stringify(tags) });
       }
     },
-    onError: () => setAutoSaveStatus("idle"),
+    onError: () => setAutoSaveStatus("error"),
   });
 
   useDebounce(
@@ -265,6 +268,7 @@ export default function EditPostPage() {
   const isPublished = Boolean(data.post.publishedAt);
   const isScheduled = Boolean(scheduledAt) && !isPublished;
   const wc = wordCount(contentMd);
+  const autoSaveMessage = formatAutoSaveStatus(autoSaveStatus, lastAutoSavedAt);
   const anyPending =
     deleteMutation.isPending ||
     publishMutation.isPending ||
@@ -482,9 +486,14 @@ export default function EditPostPage() {
             </p>
           </div>
 
-          {autoSaveStatus !== "idle" && (
-            <p className="text-right text-xs text-white/30">
-              {autoSaveStatus === "saving" ? "Saving…" : "Draft saved"}
+          {autoSaveMessage && (
+            <p
+              className={[
+                "text-right text-xs",
+                autoSaveStatus === "error" ? "text-red-300" : "text-white/30",
+              ].join(" ")}
+            >
+              {autoSaveMessage}
             </p>
           )}
 
