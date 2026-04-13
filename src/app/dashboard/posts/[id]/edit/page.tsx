@@ -15,6 +15,7 @@ import {
   MyPostsResponse,
   PostDetail,
 } from "@/lib/api/posts";
+import { formatScheduledPublishDate } from "@/lib/schedule";
 import { wordCount } from "@/lib/wordCount";
 import { formatAutoSaveStatus, type AutoSaveStatus } from "@/lib/editorStatus";
 import { useUnsavedWarning } from "@/lib/hooks/useUnsavedWarning";
@@ -269,6 +270,7 @@ export default function EditPostPage() {
   const isScheduled = Boolean(scheduledAt) && !isPublished;
   const wc = wordCount(contentMd);
   const autoSaveMessage = formatAutoSaveStatus(autoSaveStatus, lastAutoSavedAt);
+  const formattedSchedule = scheduledAt ? formatScheduledPublishDate(scheduledAt) : null;
   const anyPending =
     deleteMutation.isPending ||
     publishMutation.isPending ||
@@ -323,12 +325,7 @@ export default function EditPostPage() {
           ) : isScheduled && scheduledAt ? (
             <p className="text-xs text-white/50">
               Scheduled for{" "}
-              {new Intl.DateTimeFormat("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "2-digit",
-                timeZone: "UTC",
-              }).format(new Date(scheduledAt))}
+              {formattedSchedule?.utcDate}
             </p>
           ) : null}
         </div>
@@ -371,7 +368,17 @@ export default function EditPostPage() {
               min={new Date().toISOString().slice(0, 10)}
               className="mt-1 block rounded-md border border-white/10 bg-black/30 px-3 py-1.5 text-sm text-white outline-none focus:border-white/30"
             />
-            <p className="mt-1.5 text-xs text-white/40">Posts go live at 9 AM UTC on the selected date.</p>
+            <p className="mt-1.5 text-xs text-white/40">
+              Posts go live at 9:00 AM UTC on the selected date.
+            </p>
+            <p className="mt-1 text-xs text-white/35">
+              That is {scheduleInput ? formatScheduledPublishDate(`${scheduleInput}T09:00:00.000Z`).localDateTime : "shown in your local timezone after you pick a date"}.
+            </p>
+            {formattedSchedule && isScheduled ? (
+              <p className="mt-1 text-xs text-white/35">
+                Current schedule: {formattedSchedule.utcDateTime} ({formattedSchedule.localDateTime} local)
+              </p>
+            ) : null}
           </div>
           <div className="flex items-center gap-2 pb-0.5">
             <button
