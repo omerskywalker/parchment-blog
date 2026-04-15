@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#000"/>
+  <!-- Left vertical stem -->
+  <rect x="7" y="5" width="5" height="22" fill="#fff"/>
+  <!-- Bump top bar -->
+  <rect x="12" y="5" width="13" height="5" fill="#fff"/>
+  <!-- Bump right bar -->
+  <rect x="20" y="10" width="5" height="10" fill="#fff"/>
+  <!-- Bump bottom bar -->
+  <rect x="12" y="15" width="13" height="5" fill="#fff"/>
+</svg>
