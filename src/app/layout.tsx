@@ -57,11 +57,6 @@ export const metadata: Metadata = {
       "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
   },
 
-  icons: {
-    icon: "/icon.jpg",
-    apple: "/icon.jpg",
-  },
-
   alternates: {
     types: {
       "application/rss+xml": "/rss.xml",

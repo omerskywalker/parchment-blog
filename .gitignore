@@ -57,3 +57,5 @@ prisma/dev.db-journal
 # Planning/context docs — local only, not committed to repo
 *.md
 !README.md
+!CLAUDE.md
+!WIKI/**/*.md
