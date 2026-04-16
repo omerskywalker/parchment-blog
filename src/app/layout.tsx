@@ -17,13 +17,14 @@ const geistMono = Geist_Mono({
 });
 
 function getBaseUrl() {
-  // 1) Prefer an explicit env you control
-  const explicit = process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit) return explicit;
+  // 1) Canonical production domain — set in Vercel env vars
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
 
-  // 2) Vercel provides this automatically in prod/preview
-  const vercel = process.env.VERCEL_URL;
-  if (vercel) return `https://${vercel}`;
+  // 2) Vercel deployment URL — present in all Vercel envs but is a raw
+  //    subdomain (parchment-blog-abc.vercel.app), not the custom domain.
+  //    Only used as a fallback for preview deployments.
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
 
   // 3) Local dev fallback
   return "http://localhost:3000";
