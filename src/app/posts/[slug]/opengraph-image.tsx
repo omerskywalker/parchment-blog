@@ -6,21 +6,25 @@ export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Each path must be a static string literal — dynamic paths (template literals
-// with variables) cannot be traced by the bundler and the files won't be
-// bundled into the serverless function. Paths are relative to THIS file:
-// src/app/posts/[slug]/opengraph-image.tsx → ../../fonts/ = src/app/fonts/
+// Fonts live in public/fonts/ and are fetched via absolute URL.
+// new URL(path, import.meta.url) was tried but Turbopack resolves it to a
+// relative /_next/static/media/... path which fetch() rejects in a serverless
+// Node.js context (no base URL to resolve against).
+// Fetching from the site origin is simple and reliable — static assets in
+// public/ are always accessible, and social crawlers cache OG images anyway.
+function getBaseUrl() {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return "http://localhost:3000";
+}
+
 async function loadFonts() {
+  const base = getBaseUrl();
   return Promise.all([
-    fetch(new URL("../../fonts/Geist-Regular.otf", import.meta.url)).then((r) =>
-      r.arrayBuffer()
-    ),
-    fetch(new URL("../../fonts/Geist-Bold.otf", import.meta.url)).then((r) =>
-      r.arrayBuffer()
-    ),
-    fetch(new URL("../../fonts/GeistMono-Regular.otf", import.meta.url)).then((r) =>
-      r.arrayBuffer()
-    ),
+    fetch(`${base}/fonts/Geist-Regular.otf`).then((r) => r.arrayBuffer()),
+    fetch(`${base}/fonts/Geist-Bold.otf`).then((r) => r.arrayBuffer()),
+    fetch(`${base}/fonts/GeistMono-Regular.otf`).then((r) => r.arrayBuffer()),
   ]);
 }
 
