@@ -7,14 +7,6 @@ export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/**
- * Load fonts once (module scope) so every request doesn't re-read files.
- * These must exist at: src/app/fonts/*
- */
-const geistRegular = loadOgFont("fonts/Geist-Regular.otf");
-const geistBold = loadOgFont("fonts/Geist-Bold.otf");
-const geistMono = loadOgFont("fonts/GeistMono-Regular.otf");
-
 function clamp(str: string, max = 100) {
   const s = (str ?? "").trim();
   if (s.length <= max) return s;
@@ -72,7 +64,12 @@ async function fetchImageAsDataUrl(url: string): Promise<string | null> {
 export default async function OpenGraphImage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const post = await getPublicPostBySlug(slug);
+  const [post, geistRegular, geistBold, geistMono] = await Promise.all([
+    getPublicPostBySlug(slug),
+    loadOgFont("Geist-Regular.otf"),
+    loadOgFont("Geist-Bold.otf"),
+    loadOgFont("GeistMono-Regular.otf"),
+  ]);
 
   // Shared fonts config
   const fonts = [
