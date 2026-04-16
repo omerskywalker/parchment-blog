@@ -16,6 +16,7 @@ import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 import PostViewsInline from "@app/components/post/PostViewsInline";
 import { ReadingProgressBar } from "@app/components/post/ReadingProgressBar";
+import { TableOfContents, extractHeadings } from "@app/components/post/TableOfContents";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -24,29 +25,25 @@ type Props = {
 const PLATFORM_DESCRIPTION =
   "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.";
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://parchment.blog";
+
 /** Extracts a plain-text description from the first paragraph of markdown content. */
 function extractDescription(markdown: string): string {
-  // Split into blocks separated by blank lines
-  const blocks = markdown.split(/\n\s*\n/);
+  const blocks = markdown.replace(/```[\s\S]*?```/g, "").split(/\n\s*\n/);
 
   for (const block of blocks) {
     const stripped = block
       .trim()
-      // Remove headings
       .replace(/^#{1,6}\s+/gm, "")
-      // Remove images
       .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-      // Remove links — keep display text
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      // Remove bold/italic/strikethrough
       .replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, "$2")
-      // Remove inline code
       .replace(/`[^`]+`/g, "")
-      // Remove blockquote markers
       .replace(/^>\s+/gm, "")
-      // Remove horizontal rules
       .replace(/^[-*_]{3,}\s*$/gm, "")
-      // Collapse whitespace
       .replace(/\s+/g, " ")
       .trim();
 
@@ -77,6 +74,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "article",
       url: `/posts/${post.slug}`,
       images: [{ url: ogUrl, width: 1200, height: 630, alt: post.title }],
+      publishedTime: post.publishedAt ?? undefined,
+      authors: post.author?.name ? [post.author.name] : undefined,
+      tags: post.tags,
     },
     twitter: {
       card: "summary_large_image",
@@ -93,123 +93,172 @@ export default async function PublicPostDetailPage({ params }: Props) {
   const post = await getPublicPostBySlug(slug);
   if (!post) notFound();
 
+  const authorName = post.author?.name ?? post.author?.username ?? "Anonymous";
+  const authorUrl = post.author?.username
+    ? `${SITE_URL}/u/${post.author.username}`
+    : undefined;
+  const postUrl = `${SITE_URL}/posts/${post.slug}`;
+  const description = extractDescription(post.contentMd);
+  const headings = extractHeadings(post.contentMd);
+
+  // JSON-LD structured data — Article schema
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description,
+    url: postUrl,
+    datePublished: post.publishedAt ?? undefined,
+    dateModified: post.updatedAt,
+    author: {
+      "@type": "Person",
+      name: authorName,
+      ...(authorUrl ? { url: authorUrl } : {}),
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Parchment",
+      url: SITE_URL,
+    },
+    ...(post.tags?.length ? { keywords: post.tags.join(", ") } : {}),
+    image: `${SITE_URL}/posts/${post.slug}/opengraph-image`,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Parchment",
+      url: SITE_URL,
+    },
+  };
+
   return (
     <>
-    <ReadingProgressBar />
-    <main className="mx-auto max-w-[845px] px-4 py-10">
-      {/* top nav row (outside card) */}
-      <div className="flex items-center justify-between gap-4">
-        <Link
-          href="/posts"
-          className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
-        >
-          ← Back to posts
-        </Link>
-      </div>
+      {/* JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
-      <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-        {/* title + actions cluster (desktop) */}
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
-            {post.title}
-          </h1>
+      <ReadingProgressBar />
 
-          {/* Desktop cluster: Fire + Copy + Share */}
-          <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <PostStatsBar
-              slug={post.slug}
-              initialViewCount={post.viewCount ?? 0}
-              initialFireCount={post.fireCount ?? 0}
-              showViews={false}
-              size="md"
-              stretch={false}
-            />
-            <PostShareActions title={post.title} size="md" />
-          </div>
+      <main className="mx-auto max-w-[845px] px-4 py-10">
+        {/* top nav row (outside card) */}
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href="/posts"
+            className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+          >
+            ← Back to posts
+          </Link>
         </div>
 
-        {/* metadata line + inline views */}
-        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
-          {post.author?.username ? (
-            <Link
-              href={`/u/${post.author.username}`}
-              className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
-            >
-              {post.author.avatarKey ? (
-                <Image
-                  src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="h-8 w-8 rounded-full border border-white/10 object-cover"
+        {/* Two-column layout on xl: article + sticky ToC */}
+        <div className="mt-6 flex items-start gap-10">
+          <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
+            {/* title + actions cluster (desktop) */}
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                {post.title}
+              </h1>
+
+              {/* Desktop cluster: Fire + Copy + Share */}
+              <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="md"
+                  stretch={false}
                 />
+                <PostShareActions title={post.title} size="md" />
+              </div>
+            </div>
+
+            {/* metadata line + inline views */}
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
+              {post.author?.username ? (
+                <Link
+                  href={`/u/${post.author.username}`}
+                  className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
+                >
+                  {post.author.avatarKey ? (
+                    <Image
+                      src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full border border-white/10 object-cover"
+                    />
+                  ) : (
+                    <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+                  )}
+
+                  <span className="underline-offset-4 group-hover:underline">
+                    {post.author.name ?? post.author.username}
+                  </span>
+                  <span className="text-white/30 transition group-hover:text-white/50">→</span>
+                </Link>
               ) : (
-                <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+                <span className="inline-flex items-center gap-2 text-white/70">
+                  <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+                  {post.author?.name ?? "Anonymous"}
+                </span>
               )}
 
-              <span className="underline-offset-4 group-hover:underline">
-                {post.author.name ?? post.author.username}
+              <span className="text-white/20">·</span>
+
+              <span>
+                {post.publishedAt
+                  ? new Intl.DateTimeFormat("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    }).format(new Date(post.publishedAt))
+                  : "Unpublished"}
               </span>
-              <span className="text-white/30 transition group-hover:text-white/50">→</span>
-            </Link>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-white/70">
-              <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
-              {post.author?.name ?? "Anonymous"}
-            </span>
-          )}
 
-          <span className="text-white/20">·</span>
+              <span className="text-white/20">·</span>
 
-          <span>
-            {post.publishedAt
-              ? new Intl.DateTimeFormat("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "2-digit",
-                }).format(new Date(post.publishedAt))
-              : "Unpublished"}
-          </span>
+              <span>{post.readingTimeMin ?? 1} min read</span>
 
-          <span className="text-white/20">·</span>
+              <span className="text-white/20">·</span>
 
-          <span>{post.readingTimeMin ?? 1} min read</span>
+              <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
+            </p>
 
-          <span className="text-white/20">·</span>
+            {/* tags + mobile actions */}
+            <div className="mt-4 flex flex-col gap-3">
+              <TagChips tags={post.tags ?? []} variant="detail" />
 
-          <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
-        </p>
+              {/* Mobile: Fire reaction + share row */}
+              <div className="flex flex-col gap-2 sm:hidden">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="sm"
+                  stretch
+                  className="w-full"
+                />
+                <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+              </div>
+            </div>
 
-        {/* tags + mobile actions */}
-        <div className="mt-4 flex flex-col gap-3">
-          <TagChips tags={post.tags ?? []} variant="detail" />
+            {/* divider before content */}
+            <div className="mt-6 border-t border-white/5 pt-6">
+              <div className="prose prose-invert max-w-none leading-relaxed">
+                <Markdown content={post.contentMd} />
+              </div>
+            </div>
+          </article>
 
-          {/* Mobile: Fire reaction + share row */}
-          <div className="flex flex-col gap-2 sm:hidden">
-            <PostStatsBar
-              slug={post.slug}
-              initialViewCount={post.viewCount ?? 0}
-              initialFireCount={post.fireCount ?? 0}
-              showViews={false}
-              size="sm"
-              stretch
-              className="w-full"
-            />
-            <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
-          </div>
+          {/* Sticky Table of Contents — only renders if 3+ headings */}
+          <TableOfContents headings={headings} />
         </div>
 
-        {/* divider before content */}
-        <div className="mt-6 border-t border-white/5 pt-6">
-          <div className="prose prose-invert max-w-none leading-relaxed">
-            <Markdown content={post.contentMd} />
-          </div>
-        </div>
-      </article>
-
-      <PrevNextNav slug={post.slug} />
-      <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
-    </main>
+        <PrevNextNav slug={post.slug} />
+        <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
+      </main>
     </>
   );
 }
