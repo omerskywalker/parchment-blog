@@ -76,13 +76,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       type: "article",
       url: `/posts/${post.slug}`,
-      images: [{ url: ogUrl, width: 1200, height: 630 }],
+      images: [{ url: ogUrl, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description,
-      images: [ogUrl],
+      images: [{ url: ogUrl, alt: post.title }],
     },
   };
 }
