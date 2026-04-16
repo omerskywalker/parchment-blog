@@ -29,7 +29,13 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
             <div className="min-w-0">
               <h3 className="line-clamp-2 text-base font-medium text-white">{p.title}</h3>
 
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+              {p.excerpt && (
+                <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-white/45">
+                  {p.excerpt}
+                </p>
+              )}
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                 <span className="inline-flex items-center gap-2 text-white/70">
                   {avatarUrl ? (
                     <Image

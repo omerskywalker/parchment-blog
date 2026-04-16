@@ -12,6 +12,7 @@ type ApiPost = {
   id: string;
   title: string;
   slug: string;
+  excerpt: string | null;
   publishedAt: string | null;
   updatedAt: string;
   author: { name: string | null; avatarKey?: string | null };
@@ -42,12 +43,12 @@ async function fetchPublicPage(args: { cursor: string | null; tag?: string }): P
     throw new Error(message);
   }
 
-  return data; // ApiPage
+  return data;
 }
 
 /**
  * Track which IDs have been seen so we only animate newly appended cards.
- * We’ll “seed” it with initial IDs when we decide initial page should NOT animate.
+ * We'll "seed" it with initial IDs when we decide initial page should NOT animate.
  */
 function useSeenIds() {
   const seenRef = React.useRef<Set<string>>(new Set());
@@ -75,8 +76,6 @@ function useSeenIds() {
 
 /**
  * FLIP animation: smoothly animates layout shifts when list changes.
- * - Records previous rects
- * - After DOM updates, animates from old position to new
  */
 function useFlipList(ids: string[]) {
   const nodeByIdRef = React.useRef(new Map<string, HTMLElement>());
@@ -89,7 +88,6 @@ function useFlipList(ids: string[]) {
     };
   }, []);
 
-  // Capture "before" positions
   React.useLayoutEffect(() => {
     const next = new Map<string, DOMRect>();
     for (const id of ids) {
@@ -100,7 +98,6 @@ function useFlipList(ids: string[]) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids.join("|")]);
 
-  // Animate "after" positions (next paint)
   React.useLayoutEffect(() => {
     const prev = prevRectsRef.current;
 
@@ -115,11 +112,9 @@ function useFlipList(ids: string[]) {
 
       if (dx === 0 && dy === 0) continue;
 
-      // Invert
       node.style.transform = `translate(${dx}px, ${dy}px)`;
       node.style.transition = "transform 0s";
 
-      // Play
       requestAnimationFrame(() => {
         node.style.transition = "transform 220ms ease-out";
         node.style.transform = "translate(0, 0)";
@@ -131,13 +126,6 @@ function useFlipList(ids: string[]) {
   return { register };
 }
 
-/**
- * Detect whether the app initially loaded on /posts (hard load / direct visit)
- * - On first client render anywhere in the app, we store __pb_initial_path
- * - If that initial path starts with /posts, we allow initial animation
- * - If the initial path is / (or anything else), and user later navigates to /posts,
- *   we do NOT animate the initial page cards.
- */
 function useDirectVisitToPosts() {
   const [direct, setDirect] = React.useState(false);
 
@@ -175,7 +163,6 @@ export default function PublicPostsFeed({
     queryKey: ["public-posts-cursor", scope, { take: 10, tag: normalizedTag ?? null }],
     queryFn: ({ pageParam }) => fetchPublicPage({ cursor: pageParam ?? null, tag: normalizedTag }),
 
-    // must match initialData.pageParams shape
     initialPageParam: null,
 
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -188,6 +175,7 @@ export default function PublicPostsFeed({
             id: p.id,
             title: p.title,
             slug: p.slug,
+            excerpt: p.excerpt ?? null,
             publishedAt: p.publishedAt ? new Date(p.publishedAt).toISOString() : null,
             updatedAt: new Date(p.updatedAt).toISOString(),
             author: p.author,
@@ -208,33 +196,24 @@ export default function PublicPostsFeed({
 
   const posts = q.data?.pages.flatMap((p) => p.posts) ?? [];
 
-  // 1) only animate initial page if direct-visit to /posts
   const directVisitToPosts = useDirectVisitToPosts();
 
-  // seen-id logic
   const { justAdded, markSeen, computeJustAdded } = useSeenIds();
 
-  // Seed “seen” if we do NOT want initial animation
   React.useEffect(() => {
     if (!directVisitToPosts) {
       markSeen(posts.map((p) => p.id));
     } else {
-      // If direct visit, we want first render to animate (so do NOT mark as seen yet)
       computeJustAdded(posts.map((p) => p.id));
     }
-    // run once after we know directVisitToPosts
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directVisitToPosts]);
 
-  // Any time posts list changes after initial seed, animate only the new ones
   React.useEffect(() => {
-    // If directVisitToPosts is false, initial posts were seeded as seen; this will only animate appended pages.
-    // If directVisitToPosts is true, this will animate first page once (and later appended pages too).
     computeJustAdded(posts.map((p) => p.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts.map((p) => p.id).join("|")]);
 
-  // 2) FLIP layout animation for smooth settling when list grows
   const { register } = useFlipList(posts.map((p) => p.id));
 
   const lastPage = q.data?.pages[q.data.pages.length - 1];
@@ -264,7 +243,7 @@ export default function PublicPostsFeed({
                 key={post.id}
                 href={`/posts/${post.slug}`}
                 className={[
-                  "block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:-translate-y-0.5 hover:border-white hover:bg-black/50",
+                  "block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-black/50",
                   isNew ? "pb-fade-in" : "",
                 ].join(" ")}
                 style={
@@ -280,7 +259,13 @@ export default function PublicPostsFeed({
                     <div className="min-w-0">
                       <h2 className="truncate text-lg font-medium text-white">{post.title}</h2>
 
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+                      {post.excerpt && (
+                        <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-white/45">
+                          {post.excerpt}
+                        </p>
+                      )}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                         <span className="inline-flex items-center gap-2 text-white/70">
                           {post.author?.avatarKey ? (
                             <Image
@@ -333,12 +318,12 @@ export default function PublicPostsFeed({
               <button
                 onClick={() => q.fetchNextPage()}
                 disabled={q.isFetchingNextPage}
-                className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
+                className="rounded-md border border-white/15 bg-white/[0.05] px-4 py-2 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60"
               >
                 {q.isFetchingNextPage ? "Loading…" : "Load more"}
               </button>
             ) : (
-              <p className="text-sm text-white/50">You’re all caught up.</p>
+              <p className="text-sm text-white/40">You&apos;re all caught up.</p>
             )}
           </div>
         </>

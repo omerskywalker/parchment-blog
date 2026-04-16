@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
+import Footer from "@/app/components/Footer";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -68,10 +69,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col`}>
         <Providers>
           <Header />
-          {children}
+          <div className="flex-1">{children}</div>
+          <Footer />
         </Providers>
         <Analytics />
       </body>
