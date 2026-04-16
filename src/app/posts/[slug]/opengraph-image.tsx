@@ -1,19 +1,28 @@
 import { ImageResponse } from "next/og";
 import { getPublicPostBySlug } from "@/lib/server/public-posts";
 import { s3PublicUrlFromKey } from "@/lib/s3";
-import { loadOgFont } from "@/lib/server/og-fonts";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/**
- * Load fonts once (module scope) so every request doesn't re-read files.
- * These must exist at: src/app/fonts/*
- */
-const geistRegular = loadOgFont("fonts/Geist-Regular.otf");
-const geistBold = loadOgFont("fonts/Geist-Bold.otf");
-const geistMono = loadOgFont("fonts/GeistMono-Regular.otf");
+// Static string literals are required here — a dynamic path (e.g. template literal
+// with a variable) cannot be traced by the bundler and the files won't be included
+// in the serverless function. Each path is relative to THIS file:
+// src/app/posts/[slug]/opengraph-image.tsx → ../../fonts/ = src/app/fonts/
+async function loadFonts() {
+  return Promise.all([
+    fetch(new URL("../../fonts/Geist-Regular.otf", import.meta.url)).then((r) =>
+      r.arrayBuffer()
+    ),
+    fetch(new URL("../../fonts/Geist-Bold.otf", import.meta.url)).then((r) =>
+      r.arrayBuffer()
+    ),
+    fetch(new URL("../../fonts/GeistMono-Regular.otf", import.meta.url)).then((r) =>
+      r.arrayBuffer()
+    ),
+  ]);
+}
 
 function clamp(str: string, max = 100) {
   const s = (str ?? "").trim();
@@ -72,7 +81,10 @@ async function fetchImageAsDataUrl(url: string): Promise<string | null> {
 export default async function OpenGraphImage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const post = await getPublicPostBySlug(slug);
+  const [[geistRegular, geistBold, geistMono], post] = await Promise.all([
+    loadFonts(),
+    getPublicPostBySlug(slug),
+  ]);
 
   // Shared fonts config
   const fonts = [
