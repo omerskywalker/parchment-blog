@@ -1,5 +1,5 @@
 // src/app/posts/[slug]/page.tsx
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 import Image from "next/image";
 import Link from "next/link";
