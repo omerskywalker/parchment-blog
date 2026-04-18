@@ -16,7 +16,6 @@ export type PublicPostCard = {
   id: string;
   title: string;
   slug: string;
-  excerpt: string | null;
   publishedAt: string | null;
   updatedAt: string;
   author: { name: string | null; username: string | null; avatarKey: string | null };
@@ -45,51 +44,6 @@ export type PublicPostCursorPage = {
 };
 
 /* ============================================================
-   excerpt extraction
-   - Returns the first meaningful prose paragraph from markdown
-   - Strips headings, images, code blocks, and inline markup
-   - Truncated to 160 characters
-============================================================ */
-
-export function extractExcerpt(markdown: string, maxLen = 160): string | null {
-  // Remove fenced code blocks first
-  const stripped = markdown.replace(/```[\s\S]*?```/g, "").replace(/~~~[\s\S]*?~~~/g, "");
-
-  const blocks = stripped.split(/\n\s*\n/);
-
-  for (const block of blocks) {
-    const trimmed = block
-      .trim()
-      // Skip headings
-      .replace(/^#{1,6}\s+.*$/gm, "")
-      // Remove images
-      .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
-      // Keep link text
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      // Remove bold/italic/strikethrough
-      .replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, "$2")
-      // Remove inline code
-      .replace(/`[^`]+`/g, "")
-      // Remove blockquote markers
-      .replace(/^>\s+/gm, "")
-      // Remove horizontal rules
-      .replace(/^[-*_]{3,}\s*$/gm, "")
-      // Remove list markers
-      .replace(/^[-*+]\s+/gm, "")
-      .replace(/^\d+\.\s+/gm, "")
-      // Collapse whitespace
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (trimmed.length > 30) {
-      return trimmed.length > maxLen ? trimmed.slice(0, maxLen - 1) + "…" : trimmed;
-    }
-  }
-
-  return null;
-}
-
-/* ============================================================
 cached public feed (first page only)
 - used by /posts for fast SSR
 - optionally filtered by tag
@@ -114,7 +68,7 @@ export function getPublicPosts(args?: { tag?: string | null }) {
           publishedAt: true,
           updatedAt: true,
           contentMd: true,
-          viewCount: true,
+          viewCount: true, // ✅
           author: { select: { name: true, username: true, avatarKey: true } },
           tags: true,
         },
@@ -122,7 +76,6 @@ export function getPublicPosts(args?: { tag?: string | null }) {
 
       return rows.map(({ contentMd, ...p }) => ({
         ...p,
-        excerpt: extractExcerpt(contentMd),
         publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
         updatedAt: p.updatedAt.toISOString(),
         readingTimeMin: estimateReadingTimeMinutes(contentMd),
@@ -164,7 +117,7 @@ export async function getPublicPostsPage(args: {
       publishedAt: true,
       updatedAt: true,
       contentMd: true,
-      viewCount: true,
+      viewCount: true, // ✅
       author: { select: { name: true, username: true, avatarKey: true } },
       tags: true,
     },
@@ -176,7 +129,6 @@ export async function getPublicPostsPage(args: {
   return {
     posts: page.map(({ contentMd, ...p }) => ({
       ...p,
-      excerpt: extractExcerpt(contentMd),
       publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
       updatedAt: p.updatedAt.toISOString(),
       readingTimeMin: estimateReadingTimeMinutes(contentMd),
@@ -204,7 +156,7 @@ export async function getRelatedPosts(
       tags: { hasSome: tags },
     },
     orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
-    take: limit * 4,
+    take: limit * 4, // fetch extra so we can re-sort by overlap count in JS
     select: {
       id: true,
       title: true,
@@ -221,7 +173,6 @@ export async function getRelatedPosts(
   const withScore = rows.map(({ contentMd, ...p }) => ({
     post: {
       ...p,
-      excerpt: extractExcerpt(contentMd),
       publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
       updatedAt: p.updatedAt.toISOString(),
       readingTimeMin: estimateReadingTimeMinutes(contentMd),
