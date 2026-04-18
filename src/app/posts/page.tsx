@@ -1,10 +1,9 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublicPostsPage } from "@/lib/server/public-posts";
 import PostsPageClient from "./PostsPageClient";
-import { unstable_noStore as noStore } from "next/cache";
 
 export const metadata: Metadata = {
   title: "Posts",
@@ -16,7 +15,6 @@ type Props = {
 };
 
 export default async function PublicPostsPage({ searchParams }: Props) {
-  noStore();
   const sp = await searchParams;
 
   const rawTag = Array.isArray(sp.tag) ? sp.tag[0] : sp.tag;
