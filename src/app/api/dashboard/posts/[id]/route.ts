@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { updatePostSchema } from "@/lib/validators/posts";
 import { requireUserAndPostId, type IdCtx, jsonError } from "@/lib/server/route-helpers";
 import { ERROR_CODES } from "@/lib/server/error-codes";
+import { extractExcerpt } from "@/v3/lib/excerpt";
 
 export async function GET(_req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
@@ -65,6 +66,9 @@ export async function PATCH(req: Request, ctx: IdCtx) {
       ...parsed.data,
       ...(parsed.data.scheduledAt !== undefined
         ? { scheduledAt: parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null }
+        : {}),
+      ...(parsed.data.contentMd !== undefined
+        ? { excerpt: extractExcerpt(parsed.data.contentMd) }
         : {}),
     };
 

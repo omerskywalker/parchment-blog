@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { createPostSchema, slugify } from "@/lib/validators/posts";
 import { ERROR_CODES } from "@/lib/server/error-codes";
+import { extractExcerpt } from "@/v3/lib/excerpt";
 
 function jsonError(status: number, error: string, message?: string, issues?: unknown) {
   return NextResponse.json({ ok: false as const, error, message, issues }, { status });
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
           title,
           slug,
           contentMd,
+          excerpt: extractExcerpt(contentMd),
           authorId: user.id,
           publishedAt: user.autoPublish ? new Date() : null,
           tags: tags ?? [],

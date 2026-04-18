@@ -42,7 +42,7 @@ export default function HomePageV3({ isLoggedIn, posts }: HomePageV3Props) {
   // Enrich the top 3 posts with excerpts (server-side)
   const cards = posts.slice(0, 3).map((p) => ({
     ...p,
-    excerpt: p.contentMd ? extractExcerpt(p.contentMd) : "",
+    excerpt: p.excerpt ?? (p.contentMd ? extractExcerpt(p.contentMd) : ""),
   }));
 
   return (

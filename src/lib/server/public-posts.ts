@@ -22,6 +22,7 @@ export type PublicPostCard = {
   readingTimeMin: number;
   tags: string[];
   viewCount: number;
+  excerpt: string | null;
 };
 
 export type PublicPostDetail = {
@@ -68,18 +69,20 @@ export function getPublicPosts(args?: { tag?: string | null }) {
           publishedAt: true,
           updatedAt: true,
           contentMd: true,
+          excerpt: true,
           viewCount: true, // ✅
           author: { select: { name: true, username: true, avatarKey: true } },
           tags: true,
         },
       });
 
-      return rows.map(({ contentMd, ...p }) => ({
+      return rows.map(({ contentMd, excerpt, ...p }) => ({
         ...p,
         publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
         updatedAt: p.updatedAt.toISOString(),
         readingTimeMin: estimateReadingTimeMinutes(contentMd),
         viewCount: p.viewCount ?? 0,
+        excerpt,
       }));
     },
     ["public-posts", tag ?? "all"],

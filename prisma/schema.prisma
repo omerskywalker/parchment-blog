@@ -35,6 +35,7 @@ model Post {
   title       String
   slug        String    @unique
   contentMd   String
+  excerpt     String?
   tags        String[]  @default([])
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
