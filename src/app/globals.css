@@ -31,14 +31,27 @@
   --pb-ink-55: rgba(43, 34, 24, 0.55);
   --pb-ink-40: rgba(43, 34, 24, 0.4);
   --pb-ink-25: rgba(43, 34, 24, 0.25);
+  --pb-ink-18: rgba(43, 34, 24, 0.18);
   --pb-border: rgba(43, 34, 24, 0.18);
   --pb-border-strong: rgba(43, 34, 24, 0.3);
   --pb-accent: #8b3a1a;
+  --pb-accent-strong: #6e2d12;
+  --pb-cta-bg: var(--pb-accent);
+  --pb-cta-text: #fbf6e9;
 
   background-color: var(--pb-bg);
   color: var(--pb-ink);
-  /* Serif body for the parchment voice — system stack for zero network cost */
-  font-family: "Iowan Old Style", Georgia, "Apple Garamond", Cambria, "Times New Roman", serif;
+  /* Parchment fonts — Cormorant Garamond display + Lora text. Falls back to a
+     warm system serif stack if next/font hasn't loaded yet so users never see
+     a sans flash. */
+  font-family:
+    var(--font-pb-text),
+    "Iowan Old Style",
+    Georgia,
+    "Apple Garamond",
+    Cambria,
+    "Times New Roman",
+    serif;
 }
 
 [data-theme="sepia"] body {
@@ -46,25 +59,67 @@
   color: var(--pb-ink);
 }
 
-/* ----- Backgrounds ----- */
+/* Display serif for headings — keeps the parchment voice without overpowering body */
+[data-theme="sepia"] :is(h1, h2, h3, h4, h5, h6) {
+  font-family:
+    var(--font-pb-display),
+    "Iowan Old Style",
+    Georgia,
+    "Apple Garamond",
+    Cambria,
+    serif;
+  letter-spacing: -0.005em;
+}
+
+/* ----- Backgrounds: every bg-black/* opacity tier the codebase uses ----- */
 [data-theme="sepia"] .bg-black,
 [data-theme="sepia"] .bg-black\/95,
+[data-theme="sepia"] .bg-black\/90,
+[data-theme="sepia"] .bg-black\/70,
 [data-theme="sepia"] .bg-black\/60 {
   background-color: rgba(244, 236, 216, 0.92) !important;
 }
 [data-theme="sepia"] .bg-black\/50,
+[data-theme="sepia"] .bg-black\/45,
 [data-theme="sepia"] .bg-black\/40 {
   background-color: var(--pb-surface) !important;
 }
+[data-theme="sepia"] .bg-black\/30,
 [data-theme="sepia"] .bg-black\/20 {
   background-color: rgba(235, 225, 197, 0.5) !important;
 }
-[data-theme="sepia"] .bg-white\/10,
-[data-theme="sepia"] .bg-white\/5 {
-  background-color: rgba(43, 34, 24, 0.06) !important;
+
+/* Solid bg-white CTAs flip to the rust accent — keeps the call-to-action loud
+   on cream where pure white would disappear. Paired text-black gets repainted
+   to cream below so contrast stays AAA. */
+[data-theme="sepia"] .bg-white {
+  background-color: var(--pb-cta-bg) !important;
+}
+[data-theme="sepia"] .hover\:bg-white\/90:hover {
+  background-color: var(--pb-accent-strong) !important;
 }
 
-/* ----- Text colors ----- */
+/* Translucent white surfaces (chips, hovers, table cells) → warm ink wash */
+[data-theme="sepia"] .bg-white\/5,
+[data-theme="sepia"] .bg-white\/8,
+[data-theme="sepia"] .bg-white\/10 {
+  background-color: rgba(43, 34, 24, 0.06) !important;
+}
+[data-theme="sepia"] .bg-white\/15,
+[data-theme="sepia"] .bg-white\/20 {
+  background-color: rgba(43, 34, 24, 0.1) !important;
+}
+[data-theme="sepia"] .bg-white\/90 {
+  background-color: var(--pb-surface) !important;
+}
+
+/* Specific dark hex used by modals/editor surface */
+[data-theme="sepia"] .bg-\[\#0f0f0f\] {
+  background-color: var(--pb-surface) !important;
+  color: var(--pb-ink) !important;
+}
+
+/* ----- Text colors: every opacity tier the codebase uses ----- */
 [data-theme="sepia"] .text-white,
 [data-theme="sepia"] .text-white\/90,
 [data-theme="sepia"] .text-white\/85,
@@ -75,17 +130,27 @@
 [data-theme="sepia"] .text-white\/60 {
   color: var(--pb-ink-70) !important;
 }
-[data-theme="sepia"] .text-white\/50 {
+[data-theme="sepia"] .text-white\/55,
+[data-theme="sepia"] .text-white\/50,
+[data-theme="sepia"] .text-white\/45 {
   color: var(--pb-ink-55) !important;
 }
-[data-theme="sepia"] .text-white\/40 {
+[data-theme="sepia"] .text-white\/40,
+[data-theme="sepia"] .text-white\/35 {
   color: var(--pb-ink-40) !important;
 }
-[data-theme="sepia"] .text-white\/30 {
+[data-theme="sepia"] .text-white\/30,
+[data-theme="sepia"] .text-white\/25 {
   color: var(--pb-ink-25) !important;
 }
 [data-theme="sepia"] .text-white\/20 {
-  color: rgba(43, 34, 24, 0.18) !important;
+  color: var(--pb-ink-18) !important;
+}
+
+/* text-black on bg-white CTAs — flip to cream for readability on rust */
+[data-theme="sepia"] .bg-white.text-black,
+[data-theme="sepia"] .text-black {
+  color: var(--pb-cta-text) !important;
 }
 
 /* ----- Borders ----- */
@@ -96,41 +161,64 @@
   border-color: var(--pb-border) !important;
 }
 [data-theme="sepia"] .border-white\/15,
-[data-theme="sepia"] .border-white\/20 {
+[data-theme="sepia"] .border-white\/20,
+[data-theme="sepia"] .border-white\/25 {
   border-color: var(--pb-border-strong) !important;
 }
 
-/* ----- Hover affordances — convert the gray hover wash to a warm wash ----- */
+/* ----- Hover affordances ----- */
 [data-theme="sepia"] .hover\:bg-\[rgba\(127\2c 127\2c 127\2c 0\.12\)\]:hover {
   background-color: rgba(43, 34, 24, 0.07) !important;
 }
-[data-theme="sepia"] .hover\:bg-white\/10:hover {
+[data-theme="sepia"] .hover\:bg-white\/5:hover,
+[data-theme="sepia"] .hover\:bg-white\/10:hover,
+[data-theme="sepia"] .hover\:bg-white\/15:hover {
   background-color: rgba(43, 34, 24, 0.07) !important;
 }
+[data-theme="sepia"] .hover\:text-white:hover {
+  color: var(--pb-ink-strong) !important;
+}
+[data-theme="sepia"] .hover\:text-white\/50:hover {
+  color: var(--pb-ink-55) !important;
+}
+[data-theme="sepia"] .hover\:border-white\/25:hover {
+  border-color: var(--pb-border-strong) !important;
+}
 
-/* ----- prose-invert: undo the inversion so article body reads as ink-on-paper ----- */
+/* ----- prose-invert: Tailwind v4 typography reads from --tw-prose-invert-*
+   variables when the .prose-invert modifier is active, NOT the base
+   --tw-prose-* set. The previous override targeted the wrong vars, which is
+   why the article body H1 + lead were rendering white on cream. ----- */
 [data-theme="sepia"] .prose-invert {
-  --tw-prose-body: var(--pb-ink);
-  --tw-prose-headings: var(--pb-ink-strong);
-  --tw-prose-lead: var(--pb-ink-85);
-  --tw-prose-links: var(--pb-accent);
-  --tw-prose-bold: var(--pb-ink-strong);
-  --tw-prose-counters: var(--pb-ink-55);
-  --tw-prose-bullets: var(--pb-ink-40);
-  --tw-prose-hr: var(--pb-border);
-  --tw-prose-quotes: var(--pb-ink-85);
-  --tw-prose-quote-borders: var(--pb-border-strong);
-  --tw-prose-captions: var(--pb-ink-55);
-  --tw-prose-code: var(--pb-ink-strong);
-  --tw-prose-pre-code: var(--pb-ink-strong);
-  --tw-prose-pre-bg: rgba(43, 34, 24, 0.06);
-  --tw-prose-th-borders: var(--pb-border-strong);
-  --tw-prose-td-borders: var(--pb-border);
+  --tw-prose-invert-body: var(--pb-ink);
+  --tw-prose-invert-headings: var(--pb-ink-strong);
+  --tw-prose-invert-lead: var(--pb-ink-85);
+  --tw-prose-invert-links: var(--pb-accent);
+  --tw-prose-invert-bold: var(--pb-ink-strong);
+  --tw-prose-invert-counters: var(--pb-ink-55);
+  --tw-prose-invert-bullets: var(--pb-ink-40);
+  --tw-prose-invert-hr: var(--pb-border);
+  --tw-prose-invert-quotes: var(--pb-ink-85);
+  --tw-prose-invert-quote-borders: var(--pb-border-strong);
+  --tw-prose-invert-captions: var(--pb-ink-55);
+  --tw-prose-invert-code: var(--pb-ink-strong);
+  --tw-prose-invert-pre-code: var(--pb-ink-strong);
+  --tw-prose-invert-pre-bg: rgba(43, 34, 24, 0.06);
+  --tw-prose-invert-th-borders: var(--pb-border-strong);
+  --tw-prose-invert-td-borders: var(--pb-border);
 }
 
 /* Sepia article body uses the serif we picked above — typography just inherits */
 [data-theme="sepia"] .prose-invert :is(p, li, blockquote) {
   font-family: inherit;
+}
+/* Article headings inside prose use the display serif (set on h1-h6 above) */
+[data-theme="sepia"] .prose-invert :is(h1, h2, h3, h4, h5, h6) {
+  font-family:
+    var(--font-pb-display),
+    "Iowan Old Style",
+    Georgia,
+    serif;
 }
 /* Code blocks should stay monospaced for legibility */
 [data-theme="sepia"] .prose-invert :is(code, pre) {
