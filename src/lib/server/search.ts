@@ -26,15 +26,19 @@ type RawSearchRow = {
 };
 
 /**
- * Sanitize a user search query before passing to tsquery.
- * - Strips characters that are special to tsquery/tsquery operators
- * - Collapses whitespace
- * - Returns empty string if nothing remains
+ * Sanitize a user search query before passing to SQL.
+ *
+ * - Strips tsquery operators (kept for backwards compatibility — even though
+ *   we no longer use tsquery, these characters are still risky in patterns).
+ * - Strips % and _ which are SQL LIKE wildcards (otherwise '%' alone would
+ *   match every post).
+ * - Collapses whitespace.
+ * - Returns empty string if nothing remains.
  */
 export function sanitizeSearchQuery(raw: string): string {
   return raw
     .trim()
-    .replace(/[&|!():*\\'"<>@]/g, " ")
+    .replace(/[&|!():*\\'"<>@%_]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -48,14 +52,27 @@ function readingTime(contentMd: string): number {
 }
 
 /**
- * Full-text search over published posts using Postgres tsvector.
- * Searches title and content. Returns up to `limit` results ordered by rank.
+ * Search published posts by substring across title, body, tags, and author.
+ *
+ * Why ILIKE and not Postgres FTS (tsvector/tsquery)?
+ *   - The previous tsquery-based implementation matched literally nothing for
+ *     a small blog: stop words were stripped, short queries were stemmed
+ *     into oblivion, and tags + author names were never indexed at all, so
+ *     searching for "psychology" or an author handle returned zero rows.
+ *   - For O(hundreds) of posts, ILIKE on a substring pattern is plenty fast
+ *     and behaves the way users actually expect ("does this string appear
+ *     anywhere?"). We can revisit if the corpus grows past ~10k rows.
+ *
+ * Ranking is a sum of weights — title match is worth more than body, body more
+ * than tags, tags more than author — and ties break on most-recent-first.
  */
 export async function searchPosts(query: string, limit = 20): Promise<SearchPost[]> {
   const safe = sanitizeSearchQuery(query);
   if (!safe) return [];
 
-  // Build a plainto_tsquery from the sanitised input — safe against injection
+  const pattern = `%${safe}%`;
+  const cappedLimit = Math.min(Math.max(1, Math.floor(limit)), 50);
+
   const rows = await prisma.$queryRaw<RawSearchRow[]>`
     SELECT
       p.id,
@@ -71,15 +88,23 @@ export async function searchPosts(query: string, limit = 20): Promise<SearchPost
     JOIN "User" u ON u.id = p."authorId"
     WHERE
       p."publishedAt" IS NOT NULL
-      AND to_tsvector('english', p.title || ' ' || p."contentMd")
-          @@ plainto_tsquery('english', ${safe})
+      AND p."publishedAt" <= NOW()
+      AND (
+        p.title ILIKE ${pattern}
+        OR p."contentMd" ILIKE ${pattern}
+        OR EXISTS (SELECT 1 FROM unnest(p.tags) AS t WHERE t ILIKE ${pattern})
+        OR u.name ILIKE ${pattern}
+        OR u.username ILIKE ${pattern}
+      )
     ORDER BY
-      ts_rank(
-        to_tsvector('english', p.title || ' ' || p."contentMd"),
-        plainto_tsquery('english', ${safe})
+      (
+        (CASE WHEN p.title ILIKE ${pattern} THEN 8 ELSE 0 END) +
+        (CASE WHEN p."contentMd" ILIKE ${pattern} THEN 4 ELSE 0 END) +
+        (CASE WHEN EXISTS (SELECT 1 FROM unnest(p.tags) AS t WHERE t ILIKE ${pattern}) THEN 2 ELSE 0 END) +
+        (CASE WHEN u.name ILIKE ${pattern} OR u.username ILIKE ${pattern} THEN 1 ELSE 0 END)
       ) DESC,
       p."publishedAt" DESC
-    LIMIT ${Prisma.raw(String(Math.min(limit, 50)))}
+    LIMIT ${Prisma.raw(String(cappedLimit))}
   `;
 
   return rows.map((r) => ({
