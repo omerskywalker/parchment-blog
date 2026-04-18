@@ -15,15 +15,15 @@ export default function Markdown({ content }: Props) {
   return (
     <div
       className={[
+        // prose-invert sets all colors from --tw-prose-invert-* variables.
+        // We deliberately do NOT add prose-headings:text-white / prose-a:text-white
+        // / prose-strong:text-white modifiers anymore — those compile to literal
+        // `color: white` declarations that override theme variables, which is
+        // what was making the article body unreadable in sepia mode. Sizing
+        // and leading modifiers are fine; they don't fight the palette.
         "prose prose-invert max-w-none",
         "prose-p:leading-7",
-        "prose-a:text-white prose-a:underline prose-a:decoration-white/30 hover:prose-a:decoration-white/60",
-        "prose-strong:text-white",
-        "prose-blockquote:border-l-white/20 prose-blockquote:text-white/80",
-        "prose-hr:border-white/10",
-        // lists can get tight in dark UI; a little extra readability:
-        "prose-li:marker:text-white/30",
-        "prose-headings:text-white",
+        "prose-a:underline",
         "prose-h1:text-3xl",
         "prose-h2:text-2xl",
         "prose-h3:text-xl",
