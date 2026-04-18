@@ -1,6 +1,6 @@
 // app/layout.tsx
 import "./globals.css";
-import { Geist, Geist_Mono, Cormorant_Garamond, Lora } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Lora } from "next/font/google";
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -21,14 +21,16 @@ const geistMono = Geist_Mono({
 
 /**
  * Parchment-aesthetic fonts — used only when [data-theme="sepia"] is active
- * (see globals.css). Cormorant Garamond is a refined classical display serif;
- * Lora is a balanced book serif tuned for screen body text. Both are loaded
- * with display: swap so we never block render, and weights are scoped tight
- * to keep the payload small.
+ * (see globals.css). Playfair Display has serious presence at heading sizes
+ * — the high-contrast strokes and heavy weights read as editorial/literary,
+ * which is what was missing from the lighter Cormorant Garamond. Lora is a
+ * balanced book serif tuned for screen body text. Both load with display:
+ * swap so render is never blocked, and weights are scoped tight to keep the
+ * payload small.
  */
-const pbDisplay = Cormorant_Garamond({
+const pbDisplay = Playfair_Display({
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["600", "700", "800", "900"],
   display: "swap",
   variable: "--font-pb-display",
 });
