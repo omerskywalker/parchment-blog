@@ -61,10 +61,18 @@ function walk(dir: string, out: string[] = []): string[] {
  */
 function extractColorUtils(source: string): Set<string> {
   const found = new Set<string>();
-  const re = /(?<![:\w-])(bg-white|bg-black|text-white)(\/\d{1,3})?\b/g;
-  for (const m of source.matchAll(re)) {
-    found.add(m[1] + (m[2] ?? ""));
-  }
+  // Two shapes:
+  //   bg-white          bg-white/<num>          bg-white/[0.07]
+  //   bg-black          bg-black/<num>          bg-black/[0.05]
+  //   text-white        text-white/<num>        text-white/[0.6]
+  //   border-white      border-white/<num>      border-white/[0.07]
+  // Negative lookahead `(?!\/)` after the optional `/digits` group prevents
+  // matching bare `border-white` when the source actually contains the
+  // arbitrary form `border-white/[0.07]` (which the second regex handles).
+  const fixedRe = /(?<![:\w-])(bg-white|bg-black|text-white|border-white)(\/\d{1,3})?(?!\/)\b/g;
+  const arbRe = /(?<![:\w-])(bg-white|bg-black|text-white|border-white)\/\[[\d.]+\]/g;
+  for (const m of source.matchAll(fixedRe)) found.add(m[1] + (m[2] ?? ""));
+  for (const m of source.matchAll(arbRe)) found.add(m[0]);
   return found;
 }
 
@@ -74,11 +82,17 @@ function extractColorUtils(source: string): Set<string> {
  * We also accept the class appearing in a comma-separated selector list.
  */
 function selectorRegex(cls: string): RegExp {
-  const escaped = cls
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    .replace(/\//g, "\\\\/");
-  // Match either "[data-theme=\"sepia\"] .CLASS" or in a list "...,\n  [data-theme=\"sepia\"] .CLASS"
-  return new RegExp(`\\[data-theme="sepia"\\][^{]*\\.${escaped}(?:[\\s,{:]|$)`, "m");
+  // Tailwind escapes special chars in class selectors: `/` → `\/`,
+  // `[` → `\[`, `]` → `\]`, `.` → `\.`. We need the regex to match the
+  // CSS-escaped form found in globals.css (e.g. `.bg-white\/\[0\.07\]`).
+  let escapedForCss = cls
+    .replace(/\//g, "\\/")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\./g, "\\.");
+  // Now escape that result for use inside a JS RegExp source.
+  escapedForCss = escapedForCss.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\[data-theme="sepia"\\][^{]*\\.${escapedForCss}(?:[\\s,{:]|$)`, "m");
 }
 
 const css = fs.readFileSync(CSS_PATH, "utf8");
