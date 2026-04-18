@@ -68,7 +68,12 @@
     "Apple Garamond",
     Cambria,
     serif;
-  letter-spacing: -0.005em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+[data-theme="sepia"] h1 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
 /* ----- Backgrounds: every bg-black/* opacity tier the codebase uses ----- */
@@ -124,6 +129,19 @@
 [data-theme="sepia"] .border-white\/\[0\.06\],
 [data-theme="sepia"] .border-white\/\[0\.07\] {
   border-color: var(--pb-border-strong) !important;
+}
+
+/* ----- Emerald "Published" pill — wax-seal treatment in sepia -----
+   The dashboard list uses `bg-emerald-500/15 text-emerald-200` for the
+   Published badge, which reads as light-green-on-cream (no contrast).
+   Repaint as a small rust-accent badge — it now reads like a wax seal
+   stamped next to the post title, fitting the parchment aesthetic and
+   giving proper AAA contrast. */
+[data-theme="sepia"] .bg-emerald-500\/15 {
+  background-color: rgba(139, 58, 26, 0.18) !important;
+}
+[data-theme="sepia"] .text-emerald-200 {
+  color: var(--pb-accent-strong) !important;
 }
 
 /* Specific dark hex used by modals/editor surface */
