@@ -101,7 +101,7 @@ export default async function PublicProfilePage({ params }: Props) {
         <div className="flex items-start gap-4">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 flex items-center justify-center">
             {avatarUrl ? (
-              <Image src={avatarUrl} alt={`${displayName} avatar`} fill className="object-cover" />
+              <Image src={avatarUrl} alt={`${displayName} avatar`} fill priority className="object-cover" />
             ) : (
               <span className="text-xl font-semibold text-white/40 select-none">
                 {displayName.charAt(0).toUpperCase()}
