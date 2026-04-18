@@ -11,6 +11,7 @@ import PostStatsBar from "@/app/components/post/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
 import { PostShareActions } from "@app/components/post/PostShareActions";
+import { PostExportActions } from "@app/components/post/PostExportActions";
 import { RelatedPosts } from "@app/components/post/RelatedPosts";
 import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
@@ -123,10 +124,12 @@ export default async function PublicPostDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <ReadingProgressBar />
+      <div data-no-print="true">
+        <ReadingProgressBar />
+      </div>
 
-      <main className="mx-auto max-w-[845px] px-4 py-10">
-        <div className="flex items-center justify-between gap-4">
+      <main className="mx-auto max-w-[845px] px-4 py-10" data-print-root="true">
+        <div className="flex items-center justify-between gap-4" data-no-print="true">
           <Link
             href="/posts"
             className="rounded-md border border-white/15 px-3 py-1.5 text-sm text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
@@ -136,7 +139,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
         </div>
 
         <div className="mt-6 flex items-start gap-10">
-          <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
+          <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8" data-print-article="true">
             {/*
              * Title gets its own row so it can use the full content width —
              * sharing a flex row with the stats/share bar squeezed long
@@ -146,8 +149,8 @@ export default async function PublicPostDetailPage({ params }: Props) {
               {post.title}
             </h1>
 
-            {/* Stats + share sit on their own row beneath the title (desktop). */}
-            <div className="mt-4 hidden items-center gap-2 sm:flex">
+            {/* Stats + share + export sit on their own row beneath the title (desktop). */}
+            <div className="mt-4 hidden items-center gap-2 sm:flex" data-no-print="true">
               <PostStatsBar
                 slug={post.slug}
                 initialViewCount={post.viewCount ?? 0}
@@ -157,6 +160,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                 stretch={false}
               />
               <PostShareActions title={post.title} size="md" />
+              <PostExportActions slug={post.slug} title={post.title} size="md" />
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
@@ -208,7 +212,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
             <div className="mt-4 flex flex-col gap-3">
               <TagChips tags={post.tags ?? []} variant="detail" />
 
-              <div className="flex flex-col gap-2 sm:hidden">
+              <div className="flex flex-col gap-2 sm:hidden" data-no-print="true">
                 <PostStatsBar
                   slug={post.slug}
                   initialViewCount={post.viewCount ?? 0}
@@ -219,6 +223,13 @@ export default async function PublicPostDetailPage({ params }: Props) {
                   className="w-full"
                 />
                 <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+                <PostExportActions
+                  slug={post.slug}
+                  title={post.title}
+                  size="sm"
+                  layout="grid"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -229,11 +240,15 @@ export default async function PublicPostDetailPage({ params }: Props) {
             </div>
           </article>
 
-          <TableOfContents headings={headings} />
+          <div data-no-print="true">
+            <TableOfContents headings={headings} />
+          </div>
         </div>
 
-        <PrevNextNav slug={post.slug} />
-        <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
+        <div data-no-print="true">
+          <PrevNextNav slug={post.slug} />
+          <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />
+        </div>
       </main>
     </>
   );
