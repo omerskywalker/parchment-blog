@@ -1,6 +1,6 @@
 // app/layout.tsx
 import "./globals.css";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Cormorant_Garamond, Lora } from "next/font/google";
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -17,6 +17,27 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+});
+
+/**
+ * Parchment-aesthetic fonts — used only when [data-theme="sepia"] is active
+ * (see globals.css). Cormorant Garamond is a refined classical display serif;
+ * Lora is a balanced book serif tuned for screen body text. Both are loaded
+ * with display: swap so we never block render, and weights are scoped tight
+ * to keep the payload small.
+ */
+const pbDisplay = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  variable: "--font-pb-display",
+});
+
+const pbText = Lora({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-pb-text",
 });
 
 function getBaseUrl() {
@@ -66,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: getThemeBootScript() }} />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pbDisplay.variable} ${pbText.variable} flex min-h-screen flex-col`}
       >
         <Providers>
           <Header />
