@@ -46,8 +46,17 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
                   e.preventDefault();
                   const el = document.getElementById(id);
                   if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    setTimeout(() => window.scrollBy(0, -80), 10);
+                    // Single smooth scroll that already accounts for the
+                    // sticky-header offset. Calling scrollIntoView followed
+                    // by scrollBy in a setTimeout fights itself — the second
+                    // scroll either snaps (no smooth) or cancels the first
+                    // mid-animation. Compute the absolute target instead.
+                    const HEADER_OFFSET_PX = 80;
+                    const top =
+                      el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET_PX;
+                    window.scrollTo({ top, behavior: "smooth" });
+                    // Update the URL hash without triggering a jump.
+                    history.replaceState(null, "", `#${id}`);
                     setActiveId(id);
                   }
                 }}

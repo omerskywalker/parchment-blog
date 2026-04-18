@@ -137,22 +137,26 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
         <div className="mt-6 flex items-start gap-10">
           <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                {post.title}
-              </h1>
+            {/*
+             * Title gets its own row so it can use the full content width —
+             * sharing a flex row with the stats/share bar squeezed long
+             * titles into a narrow column on desktop.
+             */}
+            <h1 className="break-words text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl">
+              {post.title}
+            </h1>
 
-              <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                <PostStatsBar
-                  slug={post.slug}
-                  initialViewCount={post.viewCount ?? 0}
-                  initialFireCount={post.fireCount ?? 0}
-                  showViews={false}
-                  size="md"
-                  stretch={false}
-                />
-                <PostShareActions title={post.title} size="md" />
-              </div>
+            {/* Stats + share sit on their own row beneath the title (desktop). */}
+            <div className="mt-4 hidden items-center gap-2 sm:flex">
+              <PostStatsBar
+                slug={post.slug}
+                initialViewCount={post.viewCount ?? 0}
+                initialFireCount={post.fireCount ?? 0}
+                showViews={false}
+                size="md"
+                stretch={false}
+              />
+              <PostShareActions title={post.title} size="md" />
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
