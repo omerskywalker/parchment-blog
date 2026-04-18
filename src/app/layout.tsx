@@ -6,8 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
-import { isV3Enabled } from "@/lib/flags";
-import FooterV3 from "@/v3/components/FooterV3";
+import Footer from "@/app/components/Footer";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -53,20 +52,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const v3 = await isV3Enabled();
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable}${
-          v3 ? " flex min-h-screen flex-col" : ""
-        }`}
+        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col`}
       >
         <Providers>
           <Header />
-          {v3 ? <div className="flex-1">{children}</div> : children}
-          {v3 && <FooterV3 />}
+          <div className="flex-1">{children}</div>
+          <Footer />
         </Providers>
         <Analytics />
         <SpeedInsights />

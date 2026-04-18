@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { updatePostSchema } from "@/lib/validators/posts";
 import { requireUserAndPostId, type IdCtx, jsonError } from "@/lib/server/route-helpers";
 import { ERROR_CODES } from "@/lib/server/error-codes";
-import { extractExcerpt } from "@/v3/lib/excerpt";
+import { extractExcerpt } from "@/lib/excerpt";
 
 export async function GET(_req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
