@@ -12,13 +12,20 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-// Real Prisma.raw is a value-bearing helper used inside the SQL template —
-// the tests don't inspect its contents but the import must resolve.
+// Real Prisma helpers are value-bearing but we don't need to introspect them
+// in these tests — we just need the imports to resolve and the functions to
+// return *something* the SQL template can consume.
 vi.mock("@prisma/client", () => ({
-  Prisma: { raw: (s: string) => ({ __raw: s }) },
+  Prisma: {
+    raw: (s: string) => ({ __raw: s }),
+    sql: (strings: TemplateStringsArray, ...vals: unknown[]) => ({
+      __sql: { strings, vals },
+    }),
+    join: (parts: unknown[], sep: string) => ({ __join: { parts, sep } }),
+  },
 }));
 
-import { sanitizeSearchQuery, searchPosts } from "./search";
+import { sanitizeSearchQuery, searchPosts, buildWordPatterns } from "./search";
 
 describe("sanitizeSearchQuery", () => {
   it("returns empty string for empty input", () => {
@@ -90,15 +97,41 @@ describe("searchPosts — input handling", () => {
     expect(mockQueryRaw).toHaveBeenCalledOnce();
   });
 
-  it("interpolates the search pattern as %query% into the parameter list", async () => {
+  it("interpolates the full-phrase pattern as %query% into the ranking ORDER BY", async () => {
     mockQueryRaw.mockResolvedValueOnce([]);
     await searchPosts("psychology");
-    // Prisma tagged-template: first arg is the strings array, rest are the
-    // parameters interpolated via ${} — pattern is reused several times for
-    // WHERE + ORDER BY ranking, so we check at least one slot has it.
-    const callArgs = mockQueryRaw.mock.calls[0]!;
-    const params = callArgs.slice(1);
+    // The full-phrase pattern (used for rank boosting) is interpolated
+    // directly into the outer template, so it appears as a top-level param.
+    const params = mockQueryRaw.mock.calls[0]!.slice(1);
     expect(params).toContain("%psychology%");
+  });
+});
+
+describe("buildWordPatterns — multi-word matching contract", () => {
+  it("returns one pattern per whitespace-separated word", () => {
+    expect(buildWordPatterns("tiny mate")).toEqual(["%tiny%", "%mate%"]);
+  });
+
+  it("collapses repeated whitespace and ignores empty tokens", () => {
+    expect(buildWordPatterns("   foo    bar   ")).toEqual(["%foo%", "%bar%"]);
+  });
+
+  it("returns a single pattern for a single-word query", () => {
+    expect(buildWordPatterns("claude")).toEqual(["%claude%"]);
+  });
+
+  it("returns an empty array for an empty input (no DB call would happen)", () => {
+    expect(buildWordPatterns("")).toEqual([]);
+  });
+
+  it("treats short prefixes as valid words — 'cla' must produce a pattern", () => {
+    // This is the regression that broke for users: 'cla' silently dropped
+    // under tsquery stemming. With ILIKE %cla%, it must match 'claude'.
+    expect(buildWordPatterns("cla")).toEqual(["%cla%"]);
+  });
+
+  it("supports CJK / unicode tokens as their own words", () => {
+    expect(buildWordPatterns("café münchen")).toEqual(["%café%", "%münchen%"]);
   });
 });
 
