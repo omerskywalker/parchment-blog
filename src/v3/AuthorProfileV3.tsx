@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { s3PublicUrlFromKey } from "@/lib/s3";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
@@ -31,9 +32,7 @@ interface Props {
 
 export default function AuthorProfileV3({ user, totalPosts, totalReads, totalFires }: Props) {
   const displayName = user.name ?? user.username ?? "User";
-  const avatarUrl = user.avatarKey
-    ? `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${user.avatarKey}`
-    : null;
+  const avatarUrl = s3PublicUrlFromKey(user.avatarKey);
   const profileUrl = `${SITE_URL}/u/${user.username ?? ""}`;
 
   const jsonLd = {
