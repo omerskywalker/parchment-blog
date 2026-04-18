@@ -32,7 +32,7 @@ export function TableOfContentsV3({ headings }: TableOfContentsProps) {
   if (headings.length < 3) return null;
 
   return (
-    <nav aria-label="Table of contents" className="hidden xl:block">
+    <nav aria-label="Table of contents" className="hidden lg:block">
       <div className="sticky top-24 w-52 shrink-0">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/30">
           On this page
