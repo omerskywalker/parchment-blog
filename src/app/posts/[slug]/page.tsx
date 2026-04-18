@@ -16,8 +16,13 @@ import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 import PostViewsInline from "@app/components/post/PostViewsInline";
 import { ReadingProgressBar } from "@app/components/post/ReadingProgressBar";
-import { isV3Enabled } from "@/lib/flags";
-import PostDetailV3 from "@/v3/PostDetailV3";
+import { TableOfContents } from "@/app/components/post/TableOfContents";
+import { extractHeadings } from "@/lib/headings";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://parchment.blog";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -80,16 +85,46 @@ export default async function PublicPostDetailPage({ params }: Props) {
   const post = await getPublicPostBySlug(slug);
   if (!post) notFound();
 
-  // ── v3 feature flag switch ──
-  const v3 = await isV3Enabled();
-  if (v3) {
-    const description = extractDescription(post.contentMd);
-    return <PostDetailV3 post={post} description={description} />;
-  }
+  const description = extractDescription(post.contentMd);
+  const authorName = post.author?.name ?? post.author?.username ?? "Anonymous";
+  const authorUrl = post.author?.username
+    ? `${SITE_URL}/u/${post.author.username}`
+    : undefined;
+  const postUrl = `${SITE_URL}/posts/${post.slug}`;
+  const headings = extractHeadings(post.contentMd);
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description,
+    url: postUrl,
+    datePublished: post.publishedAt ?? undefined,
+    dateModified: post.updatedAt,
+    author: {
+      "@type": "Person",
+      name: authorName,
+      ...(authorUrl ? { url: authorUrl } : {}),
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Parchment",
+      url: SITE_URL,
+    },
+    ...(post.tags?.length ? { keywords: post.tags.join(", ") } : {}),
+    image: `${SITE_URL}/posts/${post.slug}/opengraph-image`,
+    isPartOf: { "@type": "WebSite", name: "Parchment", url: SITE_URL },
+  };
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <ReadingProgressBar />
+
       <main className="mx-auto max-w-[845px] px-4 py-10">
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -100,95 +135,98 @@ export default async function PublicPostDetailPage({ params }: Props) {
           </Link>
         </div>
 
-        <article className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
-              {post.title}
-            </h1>
+        <div className="mt-6 flex items-start gap-10">
+          <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                {post.title}
+              </h1>
 
-            <div className="hidden shrink-0 items-center gap-2 sm:flex">
-              <PostStatsBar
-                slug={post.slug}
-                initialViewCount={post.viewCount ?? 0}
-                initialFireCount={post.fireCount ?? 0}
-                showViews={false}
-                size="md"
-                stretch={false}
-              />
-              <PostShareActions title={post.title} size="md" />
+              <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="md"
+                  stretch={false}
+                />
+                <PostShareActions title={post.title} size="md" />
+              </div>
             </div>
-          </div>
 
-          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
-            {post.author?.username ? (
-              <Link
-                href={`/u/${post.author.username}`}
-                className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
-              >
-                {post.author.avatarKey ? (
-                  <Image
-                    src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
-                    alt=""
-                    width={32}
-                    height={32}
-                    priority
-                    className="h-8 w-8 rounded-full border border-white/10 object-cover"
-                  />
-                ) : (
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
+              {post.author?.username ? (
+                <Link
+                  href={`/u/${post.author.username}`}
+                  className="group inline-flex items-center gap-2 font-medium text-white/80 transition-colors hover:text-white"
+                >
+                  {post.author.avatarKey ? (
+                    <Image
+                      src={s3PublicUrlFromKey(post.author.avatarKey) ?? ""}
+                      alt=""
+                      width={32}
+                      height={32}
+                      priority
+                      className="h-8 w-8 rounded-full border border-white/10 object-cover"
+                    />
+                  ) : (
+                    <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
+                  )}
+                  <span className="underline-offset-4 group-hover:underline">
+                    {post.author.name ?? post.author.username}
+                  </span>
+                  <span className="text-white/30 transition group-hover:text-white/50">→</span>
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-2 text-white/70">
                   <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
-                )}
-
-                <span className="underline-offset-4 group-hover:underline">
-                  {post.author.name ?? post.author.username}
+                  {post.author?.name ?? "Anonymous"}
                 </span>
-                <span className="text-white/30 transition group-hover:text-white/50">→</span>
-              </Link>
-            ) : (
-              <span className="inline-flex items-center gap-2 text-white/70">
-                <span className="h-5 w-5 rounded-full border border-white/10 bg-white/5" />
-                {post.author?.name ?? "Anonymous"}
+              )}
+
+              <span className="text-white/20">·</span>
+              <span>
+                {post.publishedAt
+                  ? new Intl.DateTimeFormat("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    }).format(new Date(post.publishedAt))
+                  : "Unpublished"}
               </span>
-            )}
+              <span className="text-white/20">·</span>
+              <span>{post.readingTimeMin ?? 1} min read</span>
+              <span className="text-white/20">·</span>
+              <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
+            </p>
 
-            <span className="text-white/20">·</span>
-            <span>
-              {post.publishedAt
-                ? new Intl.DateTimeFormat("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "2-digit",
-                  }).format(new Date(post.publishedAt))
-                : "Unpublished"}
-            </span>
-            <span className="text-white/20">·</span>
-            <span>{post.readingTimeMin ?? 1} min read</span>
-            <span className="text-white/20">·</span>
-            <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
-          </p>
+            <div className="mt-4 flex flex-col gap-3">
+              <TagChips tags={post.tags ?? []} variant="detail" />
 
-          <div className="mt-4 flex flex-col gap-3">
-            <TagChips tags={post.tags ?? []} variant="detail" />
-
-            <div className="flex flex-col gap-2 sm:hidden">
-              <PostStatsBar
-                slug={post.slug}
-                initialViewCount={post.viewCount ?? 0}
-                initialFireCount={post.fireCount ?? 0}
-                showViews={false}
-                size="sm"
-                stretch
-                className="w-full"
-              />
-              <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+              <div className="flex flex-col gap-2 sm:hidden">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="sm"
+                  stretch
+                  className="w-full"
+                />
+                <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+              </div>
             </div>
-          </div>
 
-          <div className="mt-6 border-t border-white/5 pt-6">
-            <div className="prose prose-invert max-w-none leading-relaxed">
-              <Markdown content={post.contentMd} />
+            <div className="mt-6 border-t border-white/5 pt-6">
+              <div className="prose prose-invert max-w-none leading-relaxed">
+                <Markdown content={post.contentMd} />
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
+
+          <TableOfContents headings={headings} />
+        </div>
 
         <PrevNextNav slug={post.slug} />
         <RelatedPosts currentSlug={post.slug} tags={post.tags ?? []} />

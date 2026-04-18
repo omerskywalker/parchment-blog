@@ -6,7 +6,9 @@ import type { PublicPostCard } from "@/lib/server/public-posts";
 import { TagChips } from "@app/components/TagChips";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 
-export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) {
+type WithExcerpt = PublicPostCard & { excerpt?: string };
+
+export default function HomeLatestPosts({ posts }: { posts: WithExcerpt[] }) {
   return (
     <div className="space-y-3">
       {posts.map((p, i) => {
@@ -29,7 +31,13 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
             <div className="min-w-0">
               <h3 className="line-clamp-2 text-base font-medium text-white">{p.title}</h3>
 
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
+              {p.excerpt ? (
+                <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-white/55">
+                  {p.excerpt}
+                </p>
+              ) : null}
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/50">
                 <span className="inline-flex items-center gap-2 text-white/70">
                   {avatarUrl ? (
                     <Image
@@ -59,11 +67,9 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
                 )}
 
                 <span className="text-white/20">·</span>
-
                 <span>{p.readingTimeMin ?? 1} min read</span>
 
                 <span className="text-white/20">·</span>
-
                 <span className="inline-flex items-center gap-1">
                   <span className="opacity-70">👁</span>
                   <span className="tabular-nums">{views}</span>
@@ -76,7 +82,6 @@ export default function HomeLatestPosts({ posts }: { posts: PublicPostCard[] }) 
         );
       })}
 
-      {/* local keyframes so you don't need to touch global css */}
       <style jsx>{`
         @keyframes pb-fade-in {
           to {

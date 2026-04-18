@@ -1,56 +1,7 @@
 "use client";
 
 import * as React from "react";
-
-type Heading = {
-  id: string;
-  text: string;
-  level: number;
-};
-
-/**
- * Extracts headings from a markdown string.
- * Returns h2 and h3 headings with auto-generated IDs matching
- * the IDs that react-markdown + remark-gfm produce.
- */
-export function extractHeadings(markdown: string): Heading[] {
-  const lines = markdown.split("\n");
-  const headings: Heading[] = [];
-  let inFence = false;
-
-  for (const line of lines) {
-    if (line.startsWith("```") || line.startsWith("~~~")) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-
-    const match = line.match(/^(#{2,3})\s+(.+)$/);
-    if (!match) continue;
-
-    const level = match[1]!.length;
-    const raw = match[2]!.trim();
-    // Strip inline markdown
-    const text = raw
-      .replace(/\*{1,3}(.*?)\*{1,3}/g, "$1")
-      .replace(/_{1,3}(.*?)_{1,3}/g, "$1")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .trim();
-
-    // Generate GitHub-flavored anchor ID
-    const id = text
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    headings.push({ id, text, level });
-  }
-
-  return headings;
-}
+import { type Heading } from "@/lib/headings";
 
 interface TableOfContentsProps {
   headings: Heading[];
@@ -59,39 +10,29 @@ interface TableOfContentsProps {
 export function TableOfContents({ headings }: TableOfContentsProps) {
   const [activeId, setActiveId] = React.useState<string>("");
 
-  // Intersection observer — track which heading is currently in view
   React.useEffect(() => {
     if (headings.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
+          if (entry.isIntersecting) setActiveId(entry.target.id);
         }
       },
-      {
-        rootMargin: "-10% 0% -80% 0%",
-        threshold: 0,
-      },
+      { rootMargin: "-10% 0% -80% 0%", threshold: 0 },
     );
 
     for (const { id } of headings) {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     }
-
     return () => observer.disconnect();
   }, [headings]);
 
   if (headings.length < 3) return null;
 
   return (
-    <nav
-      aria-label="Table of contents"
-      className="hidden xl:block"
-    >
+    <nav aria-label="Table of contents" className="hidden xl:block">
       <div className="sticky top-24 w-52 shrink-0">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/30">
           On this page
@@ -106,7 +47,6 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
                   const el = document.getElementById(id);
                   if (el) {
                     el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    // Offset for sticky header (~60px)
                     setTimeout(() => window.scrollBy(0, -80), 10);
                     setActiveId(id);
                   }

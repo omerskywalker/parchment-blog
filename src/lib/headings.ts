@@ -2,8 +2,8 @@
  * Server-safe markdown heading extractor.
  *
  * Lives in its own module (no "use client") so it can be called from React
- * Server Components like PostDetailV3. The matching client component
- * (TableOfContentsV3) re-imports the type and function from here.
+ * Server Components. The client-side TableOfContents component re-imports
+ * the type and function from here.
  *
  * Produces GitHub-style anchor IDs to match what react-markdown + remark-gfm
  * generate when rendering the same headings on the page.
