@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 
 const navLink =
   "rounded-md px-3 py-1.5 text-sm text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)] hover:text-white";
@@ -93,6 +94,8 @@ export default function Header() {
 
         {/* --- desktop nav --- */}
         <nav className="hidden items-center gap-2 sm:flex">
+          <ThemeToggle />
+
           <Link href="/posts" className={navLink}>
             Posts
           </Link>
@@ -127,8 +130,11 @@ export default function Header() {
           )}
         </nav>
 
-        {/* --- mobile menu --- */}
-        <div className="relative sm:hidden">
+        {/* --- mobile: theme toggle + hamburger --- */}
+        <div className="flex items-center gap-2 sm:hidden">
+          <ThemeToggle />
+
+          <div className="relative">
           <button
             ref={buttonRef}
             type="button"
@@ -188,6 +194,7 @@ export default function Header() {
                 </Link>
               </>
             )}
+          </div>
           </div>
         </div>
       </div>
