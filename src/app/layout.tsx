@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
+import { isV3Enabled } from "@/lib/flags";
+import FooterV3 from "@/v3/components/FooterV3";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -17,32 +19,21 @@ const geistMono = Geist_Mono({
 });
 
 function getBaseUrl() {
-  // 1) Canonical production domain — set in Vercel env vars
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-
-  // 2) Vercel deployment URL — present in all Vercel envs but is a raw
-  //    subdomain (parchment-blog-abc.vercel.app), not the custom domain.
-  //    Only used as a fallback for preview deployments.
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-
-  // 3) Local dev fallback
   return "http://localhost:3000";
 }
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseUrl()),
-
   title: {
     default: "Parchment — Write Without Noise",
     template: "%s · Parchment",
   },
-
   description:
     "Parchment is a minimalist blogging platform for independent writers. No algorithmic feeds. No distractions. Just your words.",
-
   keywords: ["blog", "writing", "minimalist", "independent publishing"],
-
   openGraph: {
     type: "website",
     siteName: "Parchment",
@@ -50,28 +41,31 @@ export const metadata: Metadata = {
     description:
       "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
   },
-
   twitter: {
     card: "summary",
     title: "Parchment — Write Without Noise",
     description:
       "A minimalist blogging platform for independent writers. No algorithmic feeds. Just your words.",
   },
-
   alternates: {
-    types: {
-      "application/rss+xml": "/rss.xml",
-    },
+    types: { "application/rss+xml": "/rss.xml" },
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const v3 = await isV3Enabled();
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable}${
+          v3 ? " flex min-h-screen flex-col" : ""
+        }`}
+      >
         <Providers>
           <Header />
-          {children}
+          {v3 ? <div className="flex-1">{children}</div> : children}
+          {v3 && <FooterV3 />}
         </Providers>
         <Analytics />
       </body>

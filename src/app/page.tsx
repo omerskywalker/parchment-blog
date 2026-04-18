@@ -5,6 +5,8 @@ import { authOptions } from "@/auth";
 import Link from "next/link";
 import { getPublicPosts } from "@/lib/server/public-posts";
 import HomeLatestPosts from "./components/HomeLatestPosts";
+import { isV3Enabled } from "@/lib/flags";
+import HomePageV3 from "@/v3/HomePageV3";
 
 export const metadata = {
   title: "Parchment — Write Without Noise",
@@ -17,6 +19,12 @@ export default async function HomePage() {
   const isLoggedIn = !!session?.user;
 
   const posts = await getPublicPosts();
+
+  // ── v3 feature flag switch ──
+  const v3 = await isV3Enabled();
+  if (v3) {
+    return <HomePageV3 isLoggedIn={isLoggedIn} posts={posts} />;
+  }
 
   return (
     <main className="mx-auto max-w-[845px] px-4 py-10">
