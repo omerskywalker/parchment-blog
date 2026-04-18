@@ -46,21 +46,27 @@ describe("isV3Enabled — resolution priority", () => {
     expect(await isV3Enabled()).toBe(false);
   });
 
-  it("returns hard default (false) when no cookie and no EDGE_CONFIG env", async () => {
+  it("returns hard default (true) when no cookie and no EDGE_CONFIG env — v3 is the default", async () => {
     const { isV3Enabled } = await importFresh();
-    expect(await isV3Enabled()).toBe(false);
+    expect(await isV3Enabled()).toBe(true);
   });
 
-  it("ignores invalid cookie values and falls through to hard default", async () => {
+  it("ignores invalid cookie values and falls through to hard default (true)", async () => {
     mockCookieValue = "yes";
     const { isV3Enabled } = await importFresh();
-    expect(await isV3Enabled()).toBe(false);
+    expect(await isV3Enabled()).toBe(true);
   });
 
-  it("returns false when EDGE_CONFIG is set but the package isn't installed (silent fallback)", async () => {
+  it("returns hard default (true) when EDGE_CONFIG is set but the package isn't installed (silent fallback)", async () => {
     // The package isn't installed in this test env, so the dynamic import
     // throws inside readEdgeConfig and we fall through to hard default.
     process.env.EDGE_CONFIG = "https://edge-config.vercel.com/fake";
+    const { isV3Enabled } = await importFresh();
+    expect(await isV3Enabled()).toBe(true);
+  });
+
+  it("opt-out cookie ('0') still wins over the new default-on hard default", async () => {
+    mockCookieValue = "0";
     const { isV3Enabled } = await importFresh();
     expect(await isV3Enabled()).toBe(false);
   });
@@ -81,14 +87,14 @@ describe("describeFlagState — debug helper", () => {
     expect(state.cookie).toBe("1");
   });
 
-  it("reports source=hard-default when nothing is configured", async () => {
+  it("reports source=hard-default when nothing is configured (now resolves to true)", async () => {
     const { describeFlagState } = await importFresh();
     const state = await describeFlagState();
-    expect(state.resolved).toBe(false);
+    expect(state.resolved).toBe(true);
     expect(state.source).toBe("hard-default");
     expect(state.cookie).toBeNull();
     expect(state.edgeConfigConfigured).toBe(false);
-    expect(state.hardDefault).toBe(false);
+    expect(state.hardDefault).toBe(true);
   });
 
   it("reports edgeConfigConfigured=true when EDGE_CONFIG env is present", async () => {

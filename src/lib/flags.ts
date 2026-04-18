@@ -19,7 +19,7 @@ import { cookies } from "next/headers";
 
 const COOKIE_NAME = "pref-v3";
 const EDGE_CONFIG_KEY = "v3Enabled";
-const HARD_DEFAULT = false; // off by default during rollout
+const HARD_DEFAULT = true; // v3 is the default experience; opt out via ?v3=off
 
 /**
  * Read a boolean flag from Vercel Edge Config.
