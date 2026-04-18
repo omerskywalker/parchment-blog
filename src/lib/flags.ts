@@ -29,10 +29,14 @@ const HARD_DEFAULT = false; // off by default during rollout
 async function readEdgeConfig(): Promise<boolean | null> {
   if (!process.env.EDGE_CONFIG) return null;
   try {
-    // Lazy import so the package is optional. If it's not installed, this
-    // throws and we fall through.
-    const { get } = await import("@vercel/edge-config");
-    const value = await get<boolean>(EDGE_CONFIG_KEY);
+    // Lazy + dynamic import so TS doesn't try to resolve types for an
+    // optional dep. If the package isn't installed at runtime, the import
+    // throws and we silently return null.
+    const moduleName = "@vercel/edge-config";
+    const mod = (await import(/* webpackIgnore: true */ moduleName)) as {
+      get: <T>(key: string) => Promise<T | undefined>;
+    };
+    const value = await mod.get<boolean>(EDGE_CONFIG_KEY);
     if (typeof value === "boolean") return value;
     return null;
   } catch {
