@@ -10,7 +10,8 @@ import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
 import PostViewsInline from "@app/components/post/PostViewsInline";
 import { ReadingProgressBar } from "@app/components/post/ReadingProgressBar";
-import { TableOfContentsV3, extractHeadings } from "./components/TableOfContentsV3";
+import { TableOfContentsV3 } from "./components/TableOfContentsV3";
+import { extractHeadings } from "./lib/headings";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ??
