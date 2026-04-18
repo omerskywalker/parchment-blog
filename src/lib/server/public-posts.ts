@@ -22,6 +22,7 @@ export type PublicPostCard = {
   readingTimeMin: number;
   tags: string[];
   viewCount: number;
+  excerpt: string | null;
 };
 
 export type PublicPostDetail = {
@@ -68,18 +69,20 @@ export function getPublicPosts(args?: { tag?: string | null }) {
           publishedAt: true,
           updatedAt: true,
           contentMd: true,
+          excerpt: true,
           viewCount: true, // ✅
           author: { select: { name: true, username: true, avatarKey: true } },
           tags: true,
         },
       });
 
-      return rows.map(({ contentMd, ...p }) => ({
+      return rows.map(({ contentMd, excerpt, ...p }) => ({
         ...p,
         publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
         updatedAt: p.updatedAt.toISOString(),
         readingTimeMin: estimateReadingTimeMinutes(contentMd),
         viewCount: p.viewCount ?? 0,
+        excerpt,
       }));
     },
     ["public-posts", tag ?? "all"],
@@ -117,6 +120,7 @@ export async function getPublicPostsPage(args: {
       publishedAt: true,
       updatedAt: true,
       contentMd: true,
+      excerpt: true,
       viewCount: true, // ✅
       author: { select: { name: true, username: true, avatarKey: true } },
       tags: true,
@@ -127,12 +131,13 @@ export async function getPublicPostsPage(args: {
   const page = hasMore ? rows.slice(0, take) : rows;
 
   return {
-    posts: page.map(({ contentMd, ...p }) => ({
+    posts: page.map(({ contentMd, excerpt, ...p }) => ({
       ...p,
       publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
       updatedAt: p.updatedAt.toISOString(),
       readingTimeMin: estimateReadingTimeMinutes(contentMd),
       viewCount: p.viewCount ?? 0,
+      excerpt,
     })),
     nextCursor: hasMore ? page[page.length - 1]!.id : null,
   };
@@ -164,19 +169,21 @@ export async function getRelatedPosts(
       publishedAt: true,
       updatedAt: true,
       contentMd: true,
+      excerpt: true,
       viewCount: true,
       author: { select: { name: true, username: true, avatarKey: true } },
       tags: true,
     },
   });
 
-  const withScore = rows.map(({ contentMd, ...p }) => ({
+  const withScore = rows.map(({ contentMd, excerpt, ...p }) => ({
     post: {
       ...p,
       publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
       updatedAt: p.updatedAt.toISOString(),
       readingTimeMin: estimateReadingTimeMinutes(contentMd),
       viewCount: p.viewCount ?? 0,
+      excerpt,
     },
     score: p.tags.filter((t) => tags.includes(t)).length,
   }));
