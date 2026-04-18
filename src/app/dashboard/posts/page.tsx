@@ -98,15 +98,17 @@ export default function MyPostsPage() {
             <ul className="space-y-3">
               {sortedPosts.map((post) => (
                 <li key={post.id + post.publishedAt}>
-                  <Link
-                    href={`/dashboard/posts/${post.id}/edit`}
-                    className="block rounded-2xl border border-white/10 bg-black/40 p-5 transition-all hover:border-white/20 hover:bg-black/50"
-                  >
+                  <div className="rounded-2xl border border-white/10 bg-black/40 p-5 transition-colors hover:border-white/20">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-medium text-white">{post.title}</p>
+                      <Link
+                        href={`/dashboard/posts/${post.id}/edit`}
+                        className="min-w-0 flex-1 group"
+                      >
+                        <p className="truncate text-base font-medium text-white group-hover:text-white/90">
+                          {post.title}
+                        </p>
                         <p className="mt-1 text-sm text-white/50">/posts/{post.slug}</p>
-                      </div>
+                      </Link>
 
                       <div className="flex shrink-0 items-center gap-3">
                         {/* stats */}
@@ -133,7 +135,50 @@ export default function MyPostsPage() {
                         </span>
                       </div>
                     </div>
-                  </Link>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/dashboard/posts/${post.id}/edit`}
+                        className="rounded-md border border-white/15 px-2.5 py-1 text-xs text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                      >
+                        Edit
+                      </Link>
+                      {post.publishedAt && (
+                        <>
+                          <Link
+                            href={`/posts/${post.slug}`}
+                            className="rounded-md border border-white/15 px-2.5 py-1 text-xs text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                          >
+                            View
+                          </Link>
+                          <a
+                            href={`/api/posts/${post.slug}/markdown`}
+                            download={`${post.slug}.md`}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-white/15 px-2.5 py-1 text-xs text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
+                            aria-label={`Download ${post.title} as Markdown`}
+                            title="Download as Markdown"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 16 16"
+                              width="12"
+                              height="12"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M8 2.5v8" />
+                              <path d="M4.5 7 8 10.5 11.5 7" />
+                              <path d="M3 13h10" />
+                            </svg>
+                            <span>.md</span>
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
