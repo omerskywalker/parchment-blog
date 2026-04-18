@@ -3,6 +3,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { slugify } from "@/v3/lib/headings";
 
 type Props = {
   content: string;
@@ -11,6 +12,22 @@ type Props = {
 function isExternalHref(href?: string) {
   if (!href) return false;
   return href.startsWith("http://") || href.startsWith("https://");
+}
+
+/**
+ * Recursively flatten React children into a plain string so we can slugify it.
+ * Markdown headings can contain inline code (<code>), emphasis (<em>), links
+ * (<a>), etc. — we want the visible text, not React's render tree.
+ */
+function childrenToText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(childrenToText).join("");
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode };
+    return childrenToText(props.children);
+  }
+  return "";
 }
 
 export default function Markdown({ content }: Props) {
@@ -35,6 +52,27 @@ export default function Markdown({ content }: Props) {
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
+          // Stamp anchor ids onto h2/h3 so the V3 table-of-contents links
+          // (which use slugify(text) as the href) actually resolve. The
+          // `scroll-mt-24` classes give a fixed-header offset when navigated
+          // via #anchor — works for both TOC clicks and direct URL hits.
+          h2({ children, ...props }) {
+            const id = slugify(childrenToText(children));
+            return (
+              <h2 id={id} className="scroll-mt-24" {...props}>
+                {children}
+              </h2>
+            );
+          },
+          h3({ children, ...props }) {
+            const id = slugify(childrenToText(children));
+            return (
+              <h3 id={id} className="scroll-mt-24" {...props}>
+                {children}
+              </h3>
+            );
+          },
+
           a({ href, children, ...props }) {
             const external = isExternalHref(href);
             return (
