@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import { getThemeBootScript } from "@/lib/theme";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -55,6 +56,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+         * Stamp <html data-theme="..."> BEFORE React hydrates so visitors
+         * with a saved sepia preference never see a flash of dark theme.
+         * Inline + synchronous on purpose. See src/lib/theme.ts for the
+         * single source of truth.
+         */}
+        <script dangerouslySetInnerHTML={{ __html: getThemeBootScript() }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col`}
       >
