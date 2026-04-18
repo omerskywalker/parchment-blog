@@ -1,6 +1,176 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* ============================================================
+   PARCHMENT THEME SYSTEM
+   ------------------------------------------------------------
+   Two themes live on <html data-theme="...">:
+     - "dark"  (default — current modern look)
+     - "sepia" (warm cream parchment)
+
+   The dark theme uses Tailwind utilities directly (text-white,
+   bg-black/40, etc), so for sepia we override those specific
+   utilities with !important. This is intentional pragmatism —
+   it lets us ship a full second theme without rewriting every
+   component. If/when the codebase adopts CSS-variable-based
+   tokens, these overrides go away.
+
+   See src/v3/lib/theme.ts for the JS contract and the inline
+   boot script that prevents FOUC.
+   ============================================================ */
+
+[data-theme="sepia"] {
+  /* sepia palette — tuned for long-form reading comfort */
+  --pb-bg: #f4ecd8;
+  --pb-surface: #ebe1c5;
+  --pb-surface-soft: #e3d7b3;
+  --pb-ink: #2b2218;
+  --pb-ink-strong: #1a140d;
+  --pb-ink-85: rgba(43, 34, 24, 0.85);
+  --pb-ink-70: rgba(43, 34, 24, 0.7);
+  --pb-ink-55: rgba(43, 34, 24, 0.55);
+  --pb-ink-40: rgba(43, 34, 24, 0.4);
+  --pb-ink-25: rgba(43, 34, 24, 0.25);
+  --pb-border: rgba(43, 34, 24, 0.18);
+  --pb-border-strong: rgba(43, 34, 24, 0.3);
+  --pb-accent: #8b3a1a;
+
+  background-color: var(--pb-bg);
+  color: var(--pb-ink);
+  /* Serif body for the parchment voice — system stack for zero network cost */
+  font-family: "Iowan Old Style", Georgia, "Apple Garamond", Cambria, "Times New Roman", serif;
+}
+
+[data-theme="sepia"] body {
+  background-color: var(--pb-bg);
+  color: var(--pb-ink);
+}
+
+/* ----- Backgrounds ----- */
+[data-theme="sepia"] .bg-black,
+[data-theme="sepia"] .bg-black\/95,
+[data-theme="sepia"] .bg-black\/60 {
+  background-color: rgba(244, 236, 216, 0.92) !important;
+}
+[data-theme="sepia"] .bg-black\/50,
+[data-theme="sepia"] .bg-black\/40 {
+  background-color: var(--pb-surface) !important;
+}
+[data-theme="sepia"] .bg-black\/20 {
+  background-color: rgba(235, 225, 197, 0.5) !important;
+}
+[data-theme="sepia"] .bg-white\/10,
+[data-theme="sepia"] .bg-white\/5 {
+  background-color: rgba(43, 34, 24, 0.06) !important;
+}
+
+/* ----- Text colors ----- */
+[data-theme="sepia"] .text-white,
+[data-theme="sepia"] .text-white\/90,
+[data-theme="sepia"] .text-white\/85,
+[data-theme="sepia"] .text-white\/80 {
+  color: var(--pb-ink) !important;
+}
+[data-theme="sepia"] .text-white\/70,
+[data-theme="sepia"] .text-white\/60 {
+  color: var(--pb-ink-70) !important;
+}
+[data-theme="sepia"] .text-white\/50 {
+  color: var(--pb-ink-55) !important;
+}
+[data-theme="sepia"] .text-white\/40 {
+  color: var(--pb-ink-40) !important;
+}
+[data-theme="sepia"] .text-white\/30 {
+  color: var(--pb-ink-25) !important;
+}
+[data-theme="sepia"] .text-white\/20 {
+  color: rgba(43, 34, 24, 0.18) !important;
+}
+
+/* ----- Borders ----- */
+[data-theme="sepia"] .border-white\/5 {
+  border-color: rgba(43, 34, 24, 0.08) !important;
+}
+[data-theme="sepia"] .border-white\/10 {
+  border-color: var(--pb-border) !important;
+}
+[data-theme="sepia"] .border-white\/15,
+[data-theme="sepia"] .border-white\/20 {
+  border-color: var(--pb-border-strong) !important;
+}
+
+/* ----- Hover affordances — convert the gray hover wash to a warm wash ----- */
+[data-theme="sepia"] .hover\:bg-\[rgba\(127\2c 127\2c 127\2c 0\.12\)\]:hover {
+  background-color: rgba(43, 34, 24, 0.07) !important;
+}
+[data-theme="sepia"] .hover\:bg-white\/10:hover {
+  background-color: rgba(43, 34, 24, 0.07) !important;
+}
+
+/* ----- prose-invert: undo the inversion so article body reads as ink-on-paper ----- */
+[data-theme="sepia"] .prose-invert {
+  --tw-prose-body: var(--pb-ink);
+  --tw-prose-headings: var(--pb-ink-strong);
+  --tw-prose-lead: var(--pb-ink-85);
+  --tw-prose-links: var(--pb-accent);
+  --tw-prose-bold: var(--pb-ink-strong);
+  --tw-prose-counters: var(--pb-ink-55);
+  --tw-prose-bullets: var(--pb-ink-40);
+  --tw-prose-hr: var(--pb-border);
+  --tw-prose-quotes: var(--pb-ink-85);
+  --tw-prose-quote-borders: var(--pb-border-strong);
+  --tw-prose-captions: var(--pb-ink-55);
+  --tw-prose-code: var(--pb-ink-strong);
+  --tw-prose-pre-code: var(--pb-ink-strong);
+  --tw-prose-pre-bg: rgba(43, 34, 24, 0.06);
+  --tw-prose-th-borders: var(--pb-border-strong);
+  --tw-prose-td-borders: var(--pb-border);
+}
+
+/* Sepia article body uses the serif we picked above — typography just inherits */
+[data-theme="sepia"] .prose-invert :is(p, li, blockquote) {
+  font-family: inherit;
+}
+/* Code blocks should stay monospaced for legibility */
+[data-theme="sepia"] .prose-invert :is(code, pre) {
+  font-family:
+    var(--font-geist-mono),
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+}
+
+/* Inline code chip used by Markdown.tsx — repaint for sepia */
+[data-theme="sepia"] .prose-invert code {
+  background-color: rgba(43, 34, 24, 0.08) !important;
+  color: var(--pb-ink-strong) !important;
+}
+
+/* Image frame in articles — soften the border for the cream background */
+[data-theme="sepia"] .prose-invert img {
+  border-color: var(--pb-border) !important;
+  background-color: rgba(43, 34, 24, 0.04) !important;
+}
+
+/* Smooth crossfade between themes — feels like ink developing on the page */
+html {
+  transition:
+    background-color 280ms ease,
+    color 280ms ease;
+}
+[data-theme] body,
+[data-theme] header,
+[data-theme] article,
+[data-theme] nav {
+  transition:
+    background-color 280ms ease,
+    color 280ms ease,
+    border-color 280ms ease;
+}
+
 @layer utilities {
   .pb-fade-in {
     opacity: 0;

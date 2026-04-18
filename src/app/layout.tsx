@@ -7,6 +7,7 @@ import Providers from "./providers";
 import Header from "@/app/components/Header";
 import { isV3Enabled } from "@/lib/flags";
 import FooterV3 from "@/v3/components/FooterV3";
+import { getThemeBootScript } from "@/v3/lib/theme";
 
 const geistSans = Geist({
   subsets: ["latin"],
@@ -57,6 +58,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+         * Stamp <html data-theme="..."> BEFORE React hydrates so visitors
+         * with a saved sepia preference never see a flash of dark theme.
+         * Inline + synchronous on purpose. See src/v3/lib/theme.ts for the
+         * single source of truth.
+         */}
+        <script dangerouslySetInnerHTML={{ __html: getThemeBootScript() }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable}${
           v3 ? " flex min-h-screen flex-col" : ""
