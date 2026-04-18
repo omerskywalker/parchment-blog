@@ -131,6 +131,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                     alt=""
                     width={32}
                     height={32}
+                    priority
                     className="h-8 w-8 rounded-full border border-white/10 object-cover"
                   />
                 ) : (

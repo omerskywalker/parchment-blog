@@ -105,6 +105,7 @@ export default function PostDetailV3({ post, description }: Props) {
                       alt=""
                       width={32}
                       height={32}
+                      priority
                       className="h-8 w-8 rounded-full border border-white/10 object-cover"
                     />
                   ) : (
