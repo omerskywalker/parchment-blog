@@ -36,10 +36,12 @@ export function ThemeToggle() {
   }
 
   const target = nextTheme(theme);
+  // We follow the "show what you'll switch TO" convention — same pattern
+  // GitHub, Linear, Stripe, Vercel all use. In dark mode you see a sun
+  // (click for light/parchment); in sepia you see a moon (click for dark).
+  // Universally understood, no icon-decoding required.
   const label =
-    target === "sepia"
-      ? "Switch to parchment theme"
-      : "Switch to dark theme";
+    target === "sepia" ? "Switch to light theme" : "Switch to dark theme";
 
   return (
     <button
@@ -49,7 +51,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(applyTheme(target))}
       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/15 text-white/80 transition-colors hover:bg-[rgba(127,127,127,0.12)] hover:text-white"
     >
-      {theme === "dark" ? <ParchmentIcon /> : <MoonIcon />}
+      {theme === "dark" ? <SunIcon /> : <MoonIcon />}
     </button>
   );
 }
@@ -59,34 +61,33 @@ export function ThemeToggle() {
  * Each icon represents the OTHER theme (i.e. what you'll switch TO).
  */
 
-function ParchmentIcon() {
-  // Suggests "switch to parchment" — a stylized scroll/page corner
+function SunIcon() {
+  // Shown in dark mode — clicking switches to the light/parchment theme.
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       className="h-[18px] w-[18px]"
       aria-hidden="true"
     >
-      <path d="M5 4h10l4 4v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
-      <path d="M15 4v4h4" />
-      <path d="M7 12h8M7 15h8M7 18h5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
     </svg>
   );
 }
 
 function MoonIcon() {
-  // Suggests "switch back to dark"
+  // Shown in sepia/light mode — clicking switches back to dark.
   return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
       className="h-[18px] w-[18px]"
