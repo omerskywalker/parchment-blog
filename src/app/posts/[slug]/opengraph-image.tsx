@@ -185,28 +185,31 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ slu
           }}
         />
 
-        {/* brand */}
+        {/* brand — big editorial wordmark, matches the main UI's "Parchment"
+            (no longer "Parchment Blog"). Weight + tight tracking gives it
+            real presence at the top of the card without needing a logo mark. */}
         <div
           style={{
             display: "flex",
-            fontSize: 22,
-            opacity: 0.9,
-            letterSpacing: 0.2,
-            fontWeight: 500,
+            fontSize: 56,
+            fontWeight: 700,
+            letterSpacing: -1.6,
+            lineHeight: 1,
           }}
         >
-          Parchment Blog
+          Parchment
         </div>
 
-        {/* title */}
+        {/* title — kept large but slightly smaller than before so the brand
+            above and bottom row below have room to breathe. */}
         <div style={{ display: "flex", flexDirection: "column", maxWidth: 980 }}>
           <div
             style={{
               display: "flex",
-              fontSize: 72,
+              fontSize: 78,
               fontWeight: 700,
               lineHeight: 1.05,
-              letterSpacing: -1.4,
+              letterSpacing: -1.8,
               textShadow: "0 2px 30px rgba(0,0,0,0.55)",
             }}
           >
@@ -216,15 +219,17 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ slu
           <div
             style={{
               display: "flex",
-              marginTop: 22,
+              marginTop: 28,
               height: 1,
               width: "100%",
-              backgroundColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.12)",
             }}
           />
         </div>
 
-        {/* bottom row */}
+        {/* bottom row — every element bumped ~50% so it reads at messaging-app
+            preview sizes (where the card is shown ~300-400px wide). Avatar
+            went 52→84, author name 22→32, slug 16→22, stats 22→32. */}
         <div
           style={{
             display: "flex",
@@ -234,39 +239,41 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ slu
           }}
         >
           {/* author */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
             {avatarSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={avatarSrc}
-                width={52}
-                height={52}
+                width={84}
+                height={84}
                 alt=""
                 style={{
                   borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.14)",
+                  border: "1.5px solid rgba(255,255,255,0.18)",
                   objectFit: "cover",
-                  boxShadow: "0 10px 35px rgba(0,0,0,0.55)",
+                  boxShadow: "0 12px 40px rgba(0,0,0,0.6)",
                 }}
               />
             ) : (
               <div
                 style={{
                   display: "flex",
-                  width: 52,
-                  height: 52,
+                  width: 84,
+                  height: 84,
                   borderRadius: 999,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
+                  border: "1.5px solid rgba(255,255,255,0.14)",
+                  backgroundColor: "rgba(255,255,255,0.08)",
                 }}
               />
             )}
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "flex", fontSize: 22, fontWeight: 700, opacity: 0.92 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ display: "flex", fontSize: 32, fontWeight: 700, opacity: 0.95 }}>
                 {authorName}
               </div>
-              <div style={{ display: "flex", fontSize: 16, opacity: 0.6 }}>/posts/{slug}</div>
+              <div style={{ display: "flex", fontSize: 22, opacity: 0.55 }}>
+                /posts/{slug}
+              </div>
             </div>
           </div>
 
@@ -275,16 +282,16 @@ export default async function OpenGraphImage({ params }: { params: Promise<{ slu
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 14,
-              fontSize: 22,
-              opacity: 0.9,
+              gap: 18,
+              fontSize: 32,
+              opacity: 0.92,
               fontFamily: "Geist Mono",
             }}
           >
             <div style={{ display: "flex" }}>🔥 {fire}</div>
-            <div style={{ display: "flex", opacity: 0.35 }}>·</div>
+            <div style={{ display: "flex", opacity: 0.3 }}>·</div>
             <div style={{ display: "flex" }}>👁 {views}</div>
-            <div style={{ display: "flex", opacity: 0.35 }}>·</div>
+            <div style={{ display: "flex", opacity: 0.3 }}>·</div>
             <div style={{ display: "flex", fontFamily: "Geist" }}>{read} min</div>
           </div>
         </div>
