@@ -62,7 +62,7 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="space-y-6 text-center">
         <div className="space-y-3">
-          <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+          <h1 className="text-5xl font-bold tracking-tight text-white sm:text-6xl">
             Parchment
           </h1>
           <p className="mx-auto max-w-md text-base text-white/55 sm:text-lg">
