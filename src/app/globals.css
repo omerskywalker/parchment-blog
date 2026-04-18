@@ -113,6 +113,19 @@
   background-color: var(--pb-surface) !important;
 }
 
+/* Arbitrary opacity surfaces (home feature cards, etc.) — these are very
+   subtle washes in dark mode that disappear entirely on cream. Repaint to
+   a real surface tone with a stronger border so the cards visually separate
+   from the page background. */
+[data-theme="sepia"] .bg-white\/\[0\.03\],
+[data-theme="sepia"] .bg-white\/\[0\.06\] {
+  background-color: var(--pb-surface) !important;
+}
+[data-theme="sepia"] .border-white\/\[0\.06\],
+[data-theme="sepia"] .border-white\/\[0\.07\] {
+  border-color: var(--pb-border-strong) !important;
+}
+
 /* Specific dark hex used by modals/editor surface */
 [data-theme="sepia"] .bg-\[\#0f0f0f\] {
   background-color: var(--pb-surface) !important;
@@ -206,6 +219,46 @@
   --tw-prose-invert-pre-bg: rgba(43, 34, 24, 0.06);
   --tw-prose-invert-th-borders: var(--pb-border-strong);
   --tw-prose-invert-td-borders: var(--pb-border);
+}
+
+/* ============================================================
+   CodeMirror editor — sepia palette
+   ------------------------------------------------------------
+   The editor reads its colors from --cm-* variables (set as
+   defaults in MarkdownEditor.tsx for dark mode). When sepia is
+   active we repaint the whole surface to a darker parchment
+   tone with ink text and rust syntax accents, so the editor
+   stays visually distinct from the page background while
+   remaining fully inside the parchment palette.
+   ============================================================ */
+[data-theme="sepia"] {
+  /* Surface: noticeably darker than the page so the editor frames
+     itself, but still warm and parchment-y (not black). */
+  --cm-bg: #e3d7b3;
+  --cm-fg: var(--pb-ink);
+  --cm-caret: var(--pb-accent);
+  --cm-selection: rgba(43, 34, 24, 0.18);
+  --cm-active-line: rgba(43, 34, 24, 0.05);
+  --cm-placeholder: rgba(43, 34, 24, 0.4);
+
+  /* Syntax accents — three rust tones for headings/quotes/lists,
+     deep ink for strong, ink-70 for emphasis. */
+  --cm-accent-primary: #8b3a1a; /* h1, blockquote, inserted */
+  --cm-accent-alternate: #a4502e; /* h2, links, labels */
+  --cm-accent-secondary: #6e2d12; /* h3, list markers */
+  --cm-strong: var(--pb-ink-strong);
+  --cm-emphasis: var(--pb-ink-70);
+  --cm-monospace: var(--pb-ink-55);
+  --cm-meta: rgba(43, 34, 24, 0.3);
+  --cm-separator: var(--pb-border-strong);
+  --cm-tooltip-bg: var(--pb-surface);
+  --cm-tooltip-border: var(--pb-border-strong);
+}
+
+/* The shell wrapper has bg-black hardcoded; flatten it so the editor
+   surface itself shows through cleanly. */
+[data-theme="sepia"] .cm-parchment-shell {
+  background-color: var(--cm-bg) !important;
 }
 
 /* Sepia article body uses the serif we picked above — typography just inherits */
