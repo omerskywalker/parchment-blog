@@ -45,11 +45,16 @@ export function TableOfContentsV3({ headings }: TableOfContentsProps) {
                 onClick={(e) => {
                   e.preventDefault();
                   const el = document.getElementById(id);
-                  if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                    setTimeout(() => window.scrollBy(0, -80), 10);
-                    setActiveId(id);
-                  }
+                  if (!el) return;
+                  // Compute target with a fixed-header offset and do ONE smooth
+                  // scroll. The previous implementation chained scrollIntoView
+                  // + a setTimeout(scrollBy), which interrupted the smooth
+                  // animation. A single window.scrollTo is buttery and lands
+                  // exactly where we want.
+                  const top = el.getBoundingClientRect().top + window.scrollY - 80;
+                  window.scrollTo({ top, behavior: "smooth" });
+                  history.replaceState(null, "", `#${id}`);
+                  setActiveId(id);
                 }}
                 className={[
                   "block truncate text-sm leading-snug transition-colors duration-150",

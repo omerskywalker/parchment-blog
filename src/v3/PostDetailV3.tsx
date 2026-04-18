@@ -75,25 +75,16 @@ export default function PostDetailV3({ post, description }: Props) {
 
         <div className="mt-6 flex items-start gap-10">
           <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="min-w-0 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                {post.title}
-              </h1>
+            {/*
+             * Title gets its own full-width row so long titles never collide
+             * with the actions cluster. Stats + Share live on a later row
+             * alongside the tags, and wrap gracefully on narrow viewports.
+             */}
+            <h1 className="break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+              {post.title}
+            </h1>
 
-              <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                <PostStatsBar
-                  slug={post.slug}
-                  initialViewCount={post.viewCount ?? 0}
-                  initialFireCount={post.fireCount ?? 0}
-                  showViews={false}
-                  size="md"
-                  stretch={false}
-                />
-                <PostShareActions title={post.title} size="md" />
-              </div>
-            </div>
-
-            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
               {post.author?.username ? (
                 <Link
                   href={`/u/${post.author.username}`}
@@ -138,10 +129,28 @@ export default function PostDetailV3({ post, description }: Props) {
               <PostViewsInline slug={post.slug} initialViewCount={post.viewCount ?? 0} />
             </p>
 
-            <div className="mt-4 flex flex-col gap-3">
+            {/*
+             * Tags + actions row. Tags float left, actions cluster floats
+             * right, and the whole row wraps to two lines on narrow screens.
+             * Mobile gets the same buttons (full-width grid) for easy
+             * tap targets without duplicating markup.
+             */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
               <TagChips tags={post.tags ?? []} variant="detail" />
 
-              <div className="flex flex-col gap-2 sm:hidden">
+              <div className="hidden items-center gap-2 sm:flex">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="md"
+                  stretch={false}
+                />
+                <PostShareActions title={post.title} size="md" />
+              </div>
+
+              <div className="flex w-full flex-col gap-2 sm:hidden">
                 <PostStatsBar
                   slug={post.slug}
                   initialViewCount={post.viewCount ?? 0}

@@ -1,5 +1,35 @@
 import { describe, it, expect } from "vitest";
-import { extractHeadings } from "./headings";
+import { extractHeadings, slugify } from "./headings";
+
+describe("slugify — TOC anchor contract", () => {
+  it("lowercases and hyphenates simple text", () => {
+    expect(slugify("Hello World")).toBe("hello-world");
+  });
+
+  it("strips apostrophes and punctuation, collapses whitespace and hyphens", () => {
+    expect(slugify("What's New?  Big   Updates!")).toBe("whats-new-big-updates");
+  });
+
+  it("trims leading and trailing hyphens left over from punctuation removal", () => {
+    expect(slugify("--Title--")).toBe("title");
+  });
+
+  it("returns empty string for purely-symbolic input (caller must handle)", () => {
+    // Edge case worth pinning: a heading like "###" would slugify to "".
+    // The TOC won't render it because extractHeadings requires text after #s,
+    // but if a renderer ever stamped an empty id it would silently break links.
+    expect(slugify("!!!")).toBe("");
+  });
+
+  it("must produce identical ids for the same input as extractHeadings", () => {
+    // This is the contract: TOC links say `#${slugify(text)}`, rendered headings
+    // get id={slugify(childrenText)}. If they ever diverge, anchors break.
+    const text = "Building Interoceptive Awareness";
+    const fromExtractor = extractHeadings(`## ${text}`)[0]!.id;
+    const fromSlug = slugify(text);
+    expect(fromExtractor).toBe(fromSlug);
+  });
+});
 
 describe("extractHeadings", () => {
   it("returns an empty array for markdown with no headings", () => {
