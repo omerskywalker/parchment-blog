@@ -1,0 +1,11 @@
+import { NextResponse } from "next/server";
+
+type Params = { params: Promise<{ slug: string }> };
+
+export async function POST(_req: Request, { params }: Params) {
+  const { slug } = await params;
+  return NextResponse.json(
+    { ok: false, slug, message: "audio generation endpoint — not yet implemented" },
+    { status: 501 },
+  );
+}
