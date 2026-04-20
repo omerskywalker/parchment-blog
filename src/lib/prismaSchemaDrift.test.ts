@@ -67,13 +67,19 @@ function parseScalarFields(schema: string): ModelField[] {
       const [, fieldName, fieldType, , attrs = ""] = m;
 
       // Skip relation fields. A relation field is one whose type matches
-      // another model (uppercase first letter) and either has an @relation
-      // attribute or is an array of that model. The scalar FK columns
-      // (e.g. `authorId String`) will be captured separately.
+      // another model (uppercase first letter) and is either:
+      //   - an array of that model (one-to-many side),         e.g. `posts Post[]`
+      //   - has an @relation attribute (FK-owning side),        e.g. `author User @relation(...)`
+      //   - or is an optional singular of a model (back-side    e.g. `audio PostAudio?`
+      //     of a one-to-one where the FK lives on the other     — Prisma allows omitting
+      //     model).                                              @relation here)
+      // The scalar FK columns (e.g. `authorId String`) are
+      // captured separately and verified against migrations.
       const isLikelyModelType = /^[A-Z]/.test(fieldType);
       const hasRelationAttr = /@relation\b/.test(attrs);
       const isList = rawLine.includes("[]");
-      if (isLikelyModelType && (hasRelationAttr || isList)) continue;
+      const isOptional = rawLine.includes("?");
+      if (isLikelyModelType && (hasRelationAttr || isList || isOptional)) continue;
 
       out.push({ model: modelName, field: fieldName });
     }
