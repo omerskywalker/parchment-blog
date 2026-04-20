@@ -11,6 +11,7 @@ import PostStatsBar from "@/app/components/post/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
 import { PostShareActions } from "@app/components/post/PostShareActions";
+import { PostAudioPlayer } from "@app/components/post/PostAudioPlayer";
 import { RelatedPosts } from "@app/components/post/RelatedPosts";
 import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
@@ -157,6 +158,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                 stretch={false}
               />
               <PostShareActions title={post.title} size="md" />
+              <PostAudioPlayer slug={post.slug} title={post.title} size="md" />
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
@@ -219,6 +221,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                   className="w-full"
                 />
                 <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+                <PostAudioPlayer slug={post.slug} title={post.title} size="sm" className="w-full justify-center" />
               </div>
             </div>
 
