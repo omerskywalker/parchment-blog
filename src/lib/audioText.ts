@@ -82,3 +82,19 @@ export function isNarratable(text: string): boolean {
   if (trimmed.length < 80) return false;
   return true;
 }
+
+/**
+ * Reduce narration text to the exact slice that will be (or was) sent to TTS.
+ * Cuts on a word boundary at MAX_NARRATION_CHARS so we never split mid-word.
+ *
+ * Both the GET cache-check route and the POST generate route call this so
+ * `charCount` written at generation time always matches the value compared
+ * at read time — without this, long posts (>4000 chars) would always look
+ * stale on GET because GET would compare against the FULL text length while
+ * POST stored the TRUNCATED length.
+ */
+export function prepareNarrationInput(text: string): string {
+  if (text.length <= MAX_NARRATION_CHARS) return text;
+  const cutAt = text.lastIndexOf(" ", MAX_NARRATION_CHARS);
+  return text.slice(0, cutAt > 0 ? cutAt : MAX_NARRATION_CHARS);
+}
