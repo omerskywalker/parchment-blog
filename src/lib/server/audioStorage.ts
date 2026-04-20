@@ -12,6 +12,23 @@ export function audioPublicUrl(key: string): string {
 }
 
 /**
+ * Versioned public URL — same object, but with a deterministic cache-buster
+ * appended as a query string. Because we set immutable+1y Cache-Control on
+ * the S3 object and reuse a stable key per (postId, voice), regenerated audio
+ * would otherwise stay stuck in browser/CDN caches for up to a year. The
+ * version token (charCount-durationSec) changes whenever the audio content
+ * changes, so clients fetch the new bytes immediately while still benefiting
+ * from long caching of unchanged audio.
+ */
+export function audioPublicUrlVersioned(
+  key: string,
+  charCount: number,
+  durationSec: number,
+): string {
+  return `${audioPublicUrl(key)}?v=${charCount}-${durationSec}`;
+}
+
+/**
  * Upload an MP3 narration to S3.
  *
  * Sets long-lived immutable cache headers — the audio for a given post
