@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { audioPublicUrl } from "@/lib/server/audioStorage";
-import { isNarratable, markdownToNarrationText } from "@/lib/audioText";
+import { audioPublicUrlVersioned } from "@/lib/server/audioStorage";
+import {
+  isNarratable,
+  markdownToNarrationText,
+  prepareNarrationInput,
+} from "@/lib/audioText";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,8 +52,13 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ ok: false, status: "ineligible" }, { status: 422 });
   }
 
+  // Compare against the SAME truncated slice we'd send to TTS, so long
+  // posts (>MAX_NARRATION_CHARS) don't always look stale. See
+  // prepareNarrationInput() for rationale.
+  const input = prepareNarrationInput(text);
+
   const drift =
-    Math.abs(text.length - post.audio.charCount) /
+    Math.abs(input.length - post.audio.charCount) /
     Math.max(post.audio.charCount, 1);
 
   if (drift > STALE_DELTA_RATIO) {
@@ -59,7 +68,11 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({
     ok: true,
     status: "cached" as const,
-    audioUrl: audioPublicUrl(post.audio.audioKey),
+    audioUrl: audioPublicUrlVersioned(
+      post.audio.audioKey,
+      post.audio.charCount,
+      post.audio.durationSec,
+    ),
     durationSec: post.audio.durationSec,
     voice: post.audio.voice,
   });
