@@ -110,6 +110,17 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   const gesturePrimedRef = React.useRef(false);
   /** Last time we persisted position — throttle saves to once per N ms. */
   const lastPositionSaveRef = React.useRef(0);
+  /**
+   * In-memory mirror of the current playback position. Updated on
+   * every meaningful tick (timeupdate, pause, scrub, close) and used
+   * as the authoritative source on reopen. We also persist to
+   * localStorage for cross-page-load survival, but the ref wins
+   * within a session — that way a teardown event firing AFTER the
+   * audio element has been reset (currentTime = 0) can't clobber
+   * the real value the user reached. This is the reason a second
+   * close → reopen used to silently start from 0.
+   */
+  const sessionPositionRef = React.useRef(0);
   /** Whether we've fired the analytics 'start' event for this URL. */
   const trackedStartRef = React.useRef<string | null>(null);
 
@@ -435,7 +446,11 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       // (currentTime === 0 means the element was reset, e.g. after
       // close/reopen, or this is the first play after a prefetch).
       // Otherwise just continue from where we paused.
-      const seekTo = el.currentTime > 0 ? 0 : loadAudioPosition(slug, duration);
+      // Prefer the in-memory session ref over localStorage when both
+      // are populated — it survived any teardown writes that may have
+      // overwritten localStorage with a stale value.
+      const stored = Math.max(sessionPositionRef.current, loadAudioPosition(slug, duration));
+      const seekTo = el.currentTime > 0 ? 0 : stored;
       // Reveal the floating player immediately. When the audio was
       // pre-fetched, status is still "idle"; without this the user
       // would tap Listen and see nothing happen until the network
@@ -482,7 +497,13 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         // (A) Restore previous position if available — playWithSeek
         // defers the seek until metadata is loaded so it actually
         // sticks (Safari otherwise resets to 0 on decode start).
-        const saved = loadAudioPosition(slug, data.durationSec);
+        // Take the higher of the in-memory session ref (current
+        // tab) and localStorage (cross-load) — protects against
+        // any teardown event that wrote a stale value to storage.
+        const saved = Math.max(
+          sessionPositionRef.current,
+          loadAudioPosition(slug, data.durationSec),
+        );
         playWithSeek(el, saved).catch(() => {
           // Safari / activation expired — user can tap the visible
           // play button on the now-glowing player. No error UI.
@@ -514,11 +535,16 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   function handleClose() {
     // Bumping generation cancels any in-flight loop without races.
     generationRef.current += 1;
-    if (audioRef.current) {
-      // Persist final position before silencing — user might re-open.
-      saveAudioPosition(slug, audioRef.current.currentTime);
-      audioRef.current.pause();
-    }
+    // Capture position BEFORE any teardown — pause(), src removal,
+    // and React re-renders can each reset el.currentTime to 0 at
+    // unpredictable points. Take the snapshot first, then write it
+    // to both the in-memory ref and localStorage so subsequent
+    // reset events can't clobber the saved value.
+    const live = audioRef.current?.currentTime ?? 0;
+    if (live > 0) sessionPositionRef.current = live;
+    saveAudioPosition(slug, sessionPositionRef.current);
+
+    audioRef.current?.pause();
     // Keep gesturePrimedRef true — once primed, stays primed for the
     // life of the page so reopening doesn't require re-priming.
     setAudioUrl(null);
@@ -578,6 +604,8 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
           if (!audioUrl) return; // ignore prime-audio ticks
           const t = e.currentTarget.currentTime;
           setCurrentTime(t);
+          // Source of truth for resume — refs survive teardown events.
+          if (t > 0) sessionPositionRef.current = t;
           // (A) Throttled save — once every POSITION_SAVE_INTERVAL_MS.
           const now = Date.now();
           if (now - lastPositionSaveRef.current >= POSITION_SAVE_INTERVAL_MS) {
@@ -609,13 +637,20 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
           // last few seconds. Reset the throttle so the next
           // timeupdate doesn't double-save the same value.
           if (audioRef.current) {
-            saveAudioPosition(slug, audioRef.current.currentTime);
+            const t = audioRef.current.currentTime;
+            // Only update the in-memory ref if this is a real position
+            // (>0). A pause event triggered by src removal during
+            // teardown reports currentTime=0 and would otherwise
+            // wipe the value the user actually reached.
+            if (t > 0) sessionPositionRef.current = t;
+            saveAudioPosition(slug, sessionPositionRef.current);
             lastPositionSaveRef.current = Date.now();
           }
         }}
         onEnded={() => {
           setStatus("paused");
           // (A) Listened to the end → don't restore from the tail next time.
+          sessionPositionRef.current = 0;
           clearAudioPosition(slug);
           // (H) Completion event.
           try {
