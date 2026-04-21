@@ -34,14 +34,24 @@ export function markdownToNarrationText(md: string): string {
   // Strip emphasis markers (*, **, ***, _, __, ___, ~~) but keep inner text.
   s = s.replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, "$2");
 
-  // Headings: drop the leading hashes; append a period only when the
-  // heading doesn't already end in terminal punctuation (so we don't
-  // produce "Why does this matter?." which the TTS engine pronounces
-  // as a glitch).
+  // Headings: drop the leading hashes and append a Unicode ellipsis
+  // (U+2026) as a longer-than-normal pause cue. tts-1 reads "…" as
+  // a beat noticeably longer than a comma or period, which is what
+  // makes section breaks land in the spoken audio. The ellipsis is
+  // a single non-ASCII character, so the cleanup regexes below
+  // (which target ASCII `.`) leave it untouched. We strip any
+  // existing terminal punctuation so we don't produce "matter?…"
+  // which the TTS engine reads as a glitch.
   s = s.replace(/^#{1,6}\s+(.*)$/gm, (_match, text: string) => {
-    const trimmed = text.trim();
-    return /[.!?:]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+    const trimmed = text.trim().replace(/[.!?:]+$/, "");
+    return `${trimmed}\u2026`;
   });
+
+  // When a heading is followed by a paragraph break, the ellipsis
+  // already provides the pause — don't tack on the regular ". "
+  // sentinel below. Otherwise we'd emit "Title…. Body" with two
+  // pause cues stacked, which sounds like a stutter.
+  s = s.replace(/\u2026\s*\n{2,}/g, "\u2026 ");
 
   // Blockquote markers.
   s = s.replace(/^>\s?/gm, "");
