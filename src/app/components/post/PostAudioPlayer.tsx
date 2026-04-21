@@ -278,11 +278,10 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     cancelledRef.current = true;
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.removeAttribute("src");
-      audioRef.current.load();
     }
     // Keep gesturePrimedRef true — once primed, stays primed for the
     // life of the page so reopening doesn't require re-priming.
+    // React will remove the src attribute when audioUrl flips to null.
     setAudioUrl(null);
     setStatus("idle");
     setCurrentTime(0);
@@ -314,12 +313,22 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
        * Always-mounted <audio> element. We need it in the DOM at click
        * time (not just when audioUrl exists) so primeGesture() can call
        * .play() on a real element synchronously inside the handler.
-       * Hidden via `hidden` so it doesn't take layout space when idle.
+       *
+       * `src` is a JSX prop (not set imperatively) so React commits the
+       * attribute synchronously during the same render that flips
+       * `audioUrl`. This ordering matters: handlePlay() schedules a
+       * play() call via requestAnimationFrame after setAudioUrl(),
+       * and rAF callbacks fire BEFORE useEffect — so a useEffect-based
+       * src writer would race and lose, leaving the play() call to
+       * hit a srcless element.
+       *
+       * Hidden via `hidden` when no src so it doesn't take layout space.
        */}
       <audio
         ref={audioRef}
         preload="none"
         hidden={!audioUrl}
+        src={audioUrl ?? undefined}
         onLoadedMetadata={(e) => {
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setDuration(d);
@@ -456,41 +465,8 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         </div>
       ) : null}
 
-      {/* Now that the audio element lives outside the conditional, the
-          src attribute needs to track audioUrl. We set it imperatively
-          rather than via a JSX prop so removing the src on close
-          (handleClose) stays under our control. */}
-      <AudioSrcSync src={audioUrl} audioRef={audioRef} />
     </>
   );
-}
-
-/**
- * Imperative bridge that syncs the audioUrl state onto the
- * always-mounted <audio> element. Kept out of JSX so close/reset
- * behaviour can fully unset src via removeAttribute() without React
- * fighting us by re-asserting the prop.
- */
-function AudioSrcSync({
-  src,
-  audioRef,
-}: {
-  src: string | null;
-  audioRef: React.RefObject<HTMLAudioElement | null>;
-}) {
-  React.useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    if (src) {
-      if (el.getAttribute("src") !== src) {
-        el.setAttribute("src", src);
-        el.load();
-      }
-    } else {
-      el.removeAttribute("src");
-    }
-  }, [src, audioRef]);
-  return null;
 }
 
 /* ---------- icons (12px stroke, currentColor) ---------- */
