@@ -126,7 +126,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
       <ReadingProgressBar />
 
-      <main className="mx-auto max-w-[845px] px-4 py-10">
+      <main className="mx-auto max-w-[845px] px-4 py-10 xl:max-w-[1180px] 2xl:max-w-[1320px]">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/posts"
@@ -136,7 +136,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           </Link>
         </div>
 
-        <div className="mt-6 flex items-start gap-10">
+        <div className="mt-6 flex items-start gap-10 xl:gap-12 2xl:gap-16">
           <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
             {/*
              * Title gets its own row so it can use the full content width —
