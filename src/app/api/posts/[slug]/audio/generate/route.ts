@@ -20,7 +20,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 /** TTS calls can take 10-30s for long posts; lift the default function timeout. */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const STALE_DELTA_RATIO = 0.02;
 
