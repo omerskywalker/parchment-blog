@@ -175,6 +175,31 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     };
   }, [audioUrl, status]);
 
+  // Persist playback position when the page is hidden or unloaded.
+  // Mobile Safari aggressively throttles JS in backgrounded tabs and
+  // doesn't always fire 'pause' before the page is frozen, so we
+  // also listen for visibilitychange + pagehide as the most reliable
+  // checkpoints to capture the latest position.
+  React.useEffect(() => {
+    if (!audioUrl) return;
+    function flush() {
+      const el = audioRef.current;
+      if (!el) return;
+      // Don't overwrite a saved position with 0 if the element was
+      // reset for any reason — only meaningful positions get saved.
+      saveAudioPosition(slug, el.currentTime);
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flush();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [audioUrl, slug]);
+
   // (B) Keyboard shortcuts while a player is open: space toggles,
   // arrows skip ±15s. Ignored when typing in form fields so we don't
   // hijack the seek-bar's keyboard interactions.
@@ -344,24 +369,56 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
    * Seek-then-play that handles the case where metadata isn't loaded
    * yet. Setting currentTime before loadedmetadata is unreliable in
    * Safari — the browser may snap back to 0 once decoding starts. We
-   * defer the seek until readyState >= HAVE_METADATA.
+   * defer the seek until readyState >= HAVE_METADATA, also bind to
+   * 'canplay' as a backstop, and re-verify after a brief delay
+   * because Safari occasionally accepts the seek then resets it
+   * during buffering.
    */
   function playWithSeek(el: HTMLAudioElement, seekTo: number) {
+    let seekDone = false;
+    const target = Number.isFinite(seekTo) && seekTo > 0 ? seekTo : 0;
     const doSeek = () => {
-      if (seekTo > 0 && Number.isFinite(seekTo)) {
+      if (seekDone) return;
+      if (target > 0) {
         try {
-          el.currentTime = seekTo;
+          el.currentTime = target;
         } catch {
           /* seek out of range — start from top */
         }
       }
+      seekDone = true;
     };
     if (el.readyState >= 1 /* HAVE_METADATA */) {
       doSeek();
     } else {
       el.addEventListener("loadedmetadata", doSeek, { once: true });
+      // Some Safari builds skip 'loadedmetadata' on cached MP3s and
+      // jump straight to 'canplay'. Belt-and-suspenders: whichever
+      // fires first triggers the seek; the other becomes a no-op via
+      // seekDone.
+      el.addEventListener("canplay", doSeek, { once: true });
     }
-    return el.play();
+    const playPromise = el.play();
+    // Safari fallback: if a moment after starting playback the cursor
+    // is still nowhere near the seek target, force the seek again.
+    // Only triggers when we asked for a real (non-zero) restore.
+    if (target > 0) {
+      window.setTimeout(() => {
+        if (
+          !el.paused &&
+          el.currentTime < target - 2 &&
+          Number.isFinite(el.duration) &&
+          target < el.duration
+        ) {
+          try {
+            el.currentTime = target;
+          } catch {
+            /* ignore */
+          }
+        }
+      }, 600);
+    }
+    return playPromise;
   }
 
   async function handlePlay() {
@@ -546,6 +603,15 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         onPause={() => {
           if (!audioUrl) return;
           setStatus("paused");
+          // Persist immediately on pause — the next event might be
+          // the user closing the tab or backgrounding the app, in
+          // which case the throttled timeupdate save would miss the
+          // last few seconds. Reset the throttle so the next
+          // timeupdate doesn't double-save the same value.
+          if (audioRef.current) {
+            saveAudioPosition(slug, audioRef.current.currentTime);
+            lastPositionSaveRef.current = Date.now();
+          }
         }}
         onEnded={() => {
           setStatus("paused");
