@@ -30,10 +30,12 @@ export async function GET(_req: Request, { params }: Params) {
       publishedAt: true,
       audio: {
         select: {
+          status: true,
           audioKey: true,
           voice: true,
           durationSec: true,
           charCount: true,
+          error: true,
         },
       },
     },
@@ -44,6 +46,31 @@ export async function GET(_req: Request, { params }: Params) {
   }
 
   if (!post.audio) {
+    return NextResponse.json({ ok: false, status: "missing" }, { status: 404 });
+  }
+
+  // Background worker is still running. Client should poll.
+  if (post.audio.status === "PENDING") {
+    return NextResponse.json({ ok: true, status: "pending" as const });
+  }
+
+  // Background worker hit an error. Surface it so the client can show
+  // a useful message and the user can retry.
+  if (post.audio.status === "FAILED") {
+    return NextResponse.json({
+      ok: false,
+      status: "failed" as const,
+      message: post.audio.error ?? "Audio generation failed.",
+    });
+  }
+
+  // status === "READY" from here on. The audio fields should all be
+  // populated, but guard defensively in case of a partially-written row.
+  if (
+    !post.audio.audioKey ||
+    post.audio.charCount == null ||
+    post.audio.durationSec == null
+  ) {
     return NextResponse.json({ ok: false, status: "missing" }, { status: 404 });
   }
 
@@ -67,7 +94,7 @@ export async function GET(_req: Request, { params }: Params) {
 
   return NextResponse.json({
     ok: true,
-    status: "cached" as const,
+    status: "ready" as const,
     audioUrl: audioPublicUrlVersioned(
       post.audio.audioKey,
       post.audio.charCount,
