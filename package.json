@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "prisma migrate deploy && next build --webpack",
     "start": "next start",
     "prod:local": "NODE_ENV=production next build && NODE_ENV=production next start",
     "lint": "eslint",
