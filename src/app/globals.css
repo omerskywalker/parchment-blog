@@ -542,17 +542,19 @@ button {
    glow doesn't fight the parchment palette. */
 [data-theme="sepia"] .pb-player-glow {
   box-shadow:
-    0 0 0 1px rgba(139, 58, 26, 0.2),
-    0 18px 40px -16px rgba(43, 34, 24, 0.35);
+    0 0 0 1px rgba(139, 58, 26, 0.32),
+    0 18px 40px -16px rgba(43, 34, 24, 0.4);
   animation-name: pb-player-pulse-sepia;
 }
 
+/* Sepia opacities are tuned higher than the dark variant: warm-on-warm
+   reads as muted, so the glow needs more push to feel deliberate. */
 @keyframes pb-player-pulse-sepia {
   0% {
     box-shadow:
-      0 0 0 1px rgba(139, 58, 26, 0.25),
+      0 0 0 1px rgba(139, 58, 26, 0.35),
       0 0 0 rgba(139, 58, 26, 0),
-      0 18px 40px -16px rgba(43, 34, 24, 0.35);
+      0 18px 40px -16px rgba(43, 34, 24, 0.4);
     transform: translateY(2px);
     opacity: 0.92;
   }
@@ -562,16 +564,16 @@ button {
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(139, 58, 26, 0.6),
-      0 0 28px rgba(139, 58, 26, 0.32),
-      0 0 56px rgba(139, 58, 26, 0.16),
-      0 18px 40px -16px rgba(43, 34, 24, 0.35);
+      0 0 0 1px rgba(139, 58, 26, 0.78),
+      0 0 28px rgba(139, 58, 26, 0.45),
+      0 0 56px rgba(139, 58, 26, 0.24),
+      0 18px 40px -16px rgba(43, 34, 24, 0.4);
   }
   100% {
     box-shadow:
-      0 0 0 1px rgba(139, 58, 26, 0.25),
+      0 0 0 1px rgba(139, 58, 26, 0.35),
       0 0 0 rgba(139, 58, 26, 0),
-      0 18px 40px -16px rgba(43, 34, 24, 0.35);
+      0 18px 40px -16px rgba(43, 34, 24, 0.4);
   }
 }
 
