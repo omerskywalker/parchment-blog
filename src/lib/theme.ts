@@ -77,12 +77,17 @@ export function applyTheme(theme: Theme): Theme {
   document.documentElement.setAttribute(THEME_DOM_ATTRIBUTE, next);
 
   // Cookie: primary persistence (server-readable, survives across tabs).
+  // Secure flag is added on HTTPS so the cookie can never leak over plain
+  // HTTP; localhost stays unflagged so dev still works.
   try {
+    const isHttps =
+      typeof window !== "undefined" && window.location?.protocol === "https:";
     document.cookie =
       `${THEME_STORAGE_KEY}=${encodeURIComponent(next)};` +
       `path=/;` +
       `max-age=${THEME_COOKIE_MAX_AGE_SEC};` +
-      `SameSite=Lax`;
+      `SameSite=Lax` +
+      (isHttps ? `;Secure` : ``);
   } catch {
     // ignore — some sandboxed environments throw on document.cookie writes
   }
