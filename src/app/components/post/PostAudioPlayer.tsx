@@ -118,6 +118,38 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, audioUrl]);
 
+  // Pre-fetch cached audio metadata on mount. If the narration already
+  // exists in storage, populate audioUrl synchronously without playing
+  // — that way a later Listen tap can call play() directly inside the
+  // user gesture (no silent-WAV race, no NotAllowedError on iOS Safari
+  // for cached articles). Generation is still gated behind an explicit
+  // tap; we never kick off a TTS job without intent.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/posts/${slug}/audio`, { cache: "no-store" });
+        if (cancelled || !res.ok) return;
+        const data = (await res.json()) as PollResponse;
+        if (cancelled) return;
+        if (data.ok && data.status === "ready") {
+          setAudioUrl(data.audioUrl);
+          setDuration(data.durationSec);
+          // Status stays "idle" deliberately. We don't render the
+          // floating player or pad the body until the user actually
+          // taps Listen — pre-fetching is purely to win the iOS
+          // gesture race (real src already on the element, so the
+          // first play() call is synchronous inside the gesture).
+        }
+      } catch {
+        /* network hiccup — user can still click Listen to retry */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   // (D) While generating, tick state so dots + hint refresh on screen.
   React.useEffect(() => {
     if (status !== "generating") return;
@@ -127,8 +159,10 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
 
   // (C) Pad the bottom of <body> when the player is visible so the
   // floating bar doesn't cover the last paragraph of the article.
+  // Gated on status so a pre-fetched-but-unopened player doesn't
+  // shove every article down by 6.5rem.
   React.useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl || status === "idle") return;
     const body = document.body;
     body.classList.add(BODY_PADDED_CLASS);
     // Inline style is more robust than depending on a Tailwind util that
@@ -139,13 +173,16 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       body.classList.remove(BODY_PADDED_CLASS);
       body.style.paddingBottom = previous;
     };
-  }, [audioUrl]);
+  }, [audioUrl, status]);
 
   // (B) Keyboard shortcuts while a player is open: space toggles,
   // arrows skip ±15s. Ignored when typing in form fields so we don't
   // hijack the seek-bar's keyboard interactions.
   React.useEffect(() => {
-    if (!audioUrl) return;
+    // Only bind keyboard shortcuts after the user has opened the
+    // player — otherwise pre-fetched audio would silently capture
+    // space-bar from anyone scrolling an article.
+    if (!audioUrl || status === "idle") return;
     function isFormField(el: EventTarget | null): boolean {
       if (!(el instanceof HTMLElement)) return false;
       const tag = el.tagName;
@@ -179,7 +216,7 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     return () => window.removeEventListener("keydown", onKey);
     // skipBy / handlers reach for refs, no closure issue.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioUrl]);
+  }, [audioUrl, status]);
 
   const isWorking = status === "loading" || status === "generating";
 
@@ -303,9 +340,51 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     el.currentTime = Math.max(0, Math.min(max || el.currentTime + deltaSec, el.currentTime + deltaSec));
   }
 
+  /**
+   * Seek-then-play that handles the case where metadata isn't loaded
+   * yet. Setting currentTime before loadedmetadata is unreliable in
+   * Safari — the browser may snap back to 0 once decoding starts. We
+   * defer the seek until readyState >= HAVE_METADATA.
+   */
+  function playWithSeek(el: HTMLAudioElement, seekTo: number) {
+    const doSeek = () => {
+      if (seekTo > 0 && Number.isFinite(seekTo)) {
+        try {
+          el.currentTime = seekTo;
+        } catch {
+          /* seek out of range — start from top */
+        }
+      }
+    };
+    if (el.readyState >= 1 /* HAVE_METADATA */) {
+      doSeek();
+    } else {
+      el.addEventListener("loadedmetadata", doSeek, { once: true });
+    }
+    return el.play();
+  }
+
   async function handlePlay() {
+    // (1) Toggle behaviour: if the audio is already loaded, the
+    // trigger button doubles as a play/pause toggle so users get one
+    // primary control regardless of where they are on the page.
     if (audioUrl && audioRef.current) {
-      audioRef.current.play().catch(() => undefined);
+      const el = audioRef.current;
+      if (!el.paused) {
+        el.pause();
+        return;
+      }
+      // Resume — restore saved position if this is a fresh open
+      // (currentTime === 0 means the element was reset, e.g. after
+      // close/reopen, or this is the first play after a prefetch).
+      // Otherwise just continue from where we paused.
+      const seekTo = el.currentTime > 0 ? 0 : loadAudioPosition(slug, duration);
+      // Reveal the floating player immediately. When the audio was
+      // pre-fetched, status is still "idle"; without this the user
+      // would tap Listen and see nothing happen until the network
+      // round-trip for the MP3 metadata completes.
+      if (status === "idle") setStatus("loading");
+      playWithSeek(el, seekTo).catch(() => undefined);
       return;
     }
 
@@ -343,10 +422,11 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         const el = audioRef.current;
         if (!el) return;
         el.playbackRate = speed;
-        // (A) Restore previous position if available.
+        // (A) Restore previous position if available — playWithSeek
+        // defers the seek until metadata is loaded so it actually
+        // sticks (Safari otherwise resets to 0 on decode start).
         const saved = loadAudioPosition(slug, data.durationSec);
-        if (saved > 0) el.currentTime = saved;
-        el.play().catch(() => {
+        playWithSeek(el, saved).catch(() => {
           // Safari / activation expired — user can tap the visible
           // play button on the now-glowing player. No error UI.
         });
@@ -485,11 +565,23 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         type="button"
         onClick={handlePlay}
         disabled={isWorking}
-        aria-label={isWorking ? "Loading audio narration" : "Play article"}
-        title="Listen to this article"
+        aria-label={
+          isWorking
+            ? "Loading audio narration"
+            : status === "playing"
+              ? "Pause article"
+              : "Play article"
+        }
+        title={status === "playing" ? "Pause" : "Listen to this article"}
         className={[triggerBase, triggerPad, className ?? ""].join(" ")}
       >
-        {isWorking ? <SpinnerIcon /> : <PlayIcon />}
+        {isWorking ? (
+          <SpinnerIcon />
+        ) : status === "playing" ? (
+          <PauseIcon />
+        ) : (
+          <PlayIcon />
+        )}
         {status === "generating" ? (
           // Pin "Generating" in place; the dots get a fixed-width
           // left-aligned slot so adding/removing one doesn't shift the
@@ -504,6 +596,8 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
               {dots}
             </span>
           </span>
+        ) : status === "playing" ? (
+          <span>Pause</span>
         ) : (
           <span>Listen</span>
         )}
@@ -523,8 +617,11 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         </span>
       ) : null}
 
-      {/* Floating player */}
-      {audioUrl ? (
+      {/* Floating player — only after explicit user intent (status
+          leaves "idle"). Pre-fetched cached audio sets audioUrl
+          silently; we don't reveal the player UI until the user
+          actually taps Listen. */}
+      {audioUrl && status !== "idle" ? (
         minimized ? (
           // The minimized bubble's primary action is play/pause —
           // matches the icon shown. Expanding lives on a small caret
