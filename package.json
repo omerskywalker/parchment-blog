@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && next build --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "prod:local": "NODE_ENV=production next build && NODE_ENV=production next start",
     "lint": "eslint",
@@ -16,7 +16,8 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "build:vercel": "prisma migrate deploy && next build --webpack"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.990.0",
