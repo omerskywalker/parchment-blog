@@ -37,7 +37,7 @@ type AudioPostResponse =
 type Props = {
   slug: string;
   title: string;
-  /** Match PostShareActions sizing. */
+  /** Match PostShareActions / PostStatsBar sizing. */
   size?: "sm" | "md";
   className?: string;
 };
@@ -62,10 +62,12 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * "Play article" button + floating mini-player.
+ * "Listen" trigger button + floating mini-player.
  *
  * Lifecycle:
- *   1. Click Play → GET /audio.
+ *   1. Click Listen → claim the user-gesture grant on the always-mounted
+ *      <audio> element by calling .play() synchronously inside the handler,
+ *      then GET /audio.
  *      - 200 ready → straight to player.
  *      - 200 pending → another tab/user already kicked off a worker;
  *        start polling.
@@ -73,9 +75,13 @@ function sleep(ms: number): Promise<void> {
  *        then start polling.
  *      - failed/ineligible → show error.
  *   2. Polling: GET /audio every POLL_INTERVAL_MS until ready or failed.
- *   3. Audio element loads the MP3, then auto-plays.
+ *   3. URL arrives → set audio.src and call .play() again. Because the
+ *      element was already activated during the click, browsers honour
+ *      the autoplay (modulo Safari, where the visible play button is
+ *      the documented fallback).
  *   4. Floating bar appears bottom-right (desktop) / bottom-center
- *      (mobile) with scrub bar + speed + close.
+ *      (mobile) with a 5s entrance pulse so it's not camouflaged into
+ *      the page chrome.
  *   5. Close dismisses the player. State resets on next click.
  */
 export function PostAudioPlayer({ slug, title, size = "md", className }: Props) {
@@ -93,6 +99,12 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
    * race with subsequent clicks.
    */
   const cancelledRef = React.useRef(false);
+  /**
+   * Tracks whether we've consumed a user-gesture grant on the audio
+   * element. Once true, .play() can be called from async contexts and
+   * still be honoured by Chromium/Firefox (Safari is stricter).
+   */
+  const gesturePrimedRef = React.useRef(false);
 
   // Keep playbackRate in sync with state.
   React.useEffect(() => {
@@ -159,11 +171,47 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     return postData as AudioGetResponse;
   }
 
+  /**
+   * Synchronously consume the click's user-gesture grant so the
+   * <audio> element is allowed to start playback later, after the
+   * async fetch/poll completes. Browsers gate autoplay behind a
+   * recent user activation; without this trick, by the time the MP3
+   * URL arrives 30–60s later, the gesture has expired and play()
+   * silently rejects with NotAllowedError.
+   *
+   * The element has no src yet, so play() rejects immediately — that
+   * is fine. The act of synchronously calling play() inside a click
+   * handler is what claims the activation.
+   */
+  function primeGesture() {
+    const el = audioRef.current;
+    if (!el || gesturePrimedRef.current) return;
+    try {
+      // Some browsers warn on the unhandled rejection — swallow it.
+      el.play().then(
+        () => {
+          gesturePrimedRef.current = true;
+        },
+        () => {
+          // Even on rejection (no src), Chromium has now seen a
+          // synchronous play() inside a gesture for this element.
+          gesturePrimedRef.current = true;
+        },
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function handlePlay() {
     if (audioUrl && audioRef.current) {
       audioRef.current.play().catch(() => undefined);
       return;
     }
+
+    // Must run BEFORE any await so we're still inside the gesture.
+    primeGesture();
+
     cancelledRef.current = false;
     setStatus("loading");
     setErrorMsg(null);
@@ -184,9 +232,16 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       setAudioUrl(data.audioUrl);
       setDuration(data.durationSec);
       setStatus("ready");
-      // Autoplay once the element mounts. Defer to next tick so the ref attaches.
+      // Autoplay once the src lands on the element. Defer to next tick
+      // so React commits the new src attribute before play() is called.
       requestAnimationFrame(() => {
-        audioRef.current?.play().catch(() => undefined);
+        const el = audioRef.current;
+        if (!el) return;
+        el.playbackRate = speed;
+        el.play().catch(() => {
+          // Safari / activation expired — user can tap the visible
+          // play button on the now-glowing player. No error UI.
+        });
       });
     } catch (err) {
       if (cancelledRef.current) return;
@@ -223,19 +278,58 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     cancelledRef.current = true;
     if (audioRef.current) {
       audioRef.current.pause();
-      audioRef.current.src = "";
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
     }
+    // Keep gesturePrimedRef true — once primed, stays primed for the
+    // life of the page so reopening doesn't require re-priming.
     setAudioUrl(null);
     setStatus("idle");
     setCurrentTime(0);
     setDuration(0);
   }
 
-  const buttonSizeClass =
-    size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm";
+  /**
+   * Trigger button styling — matches the Fire/Copy/Post/Share buttons
+   * in PostStatsBar + PostShareActions so the action row reads as one
+   * coherent group rather than a stack of mismatched pills.
+   *
+   *   h-10 · rounded-xl · border-white/10 · bg-black/30 · px-4 · text-sm
+   */
+  const triggerHeight = "h-10";
+  const triggerBase =
+    `${triggerHeight} inline-flex items-center justify-center gap-2 ` +
+    `rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white/85 ` +
+    `transition-[transform,background-color,border-color,box-shadow,opacity] duration-200 ` +
+    `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] active:translate-y-0 ` +
+    `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ` +
+    `disabled:opacity-60 disabled:hover:translate-y-0 cursor-pointer`;
+  // Sizes are equivalent visually now — `size` no longer changes height,
+  // only paddings. Kept as a prop for caller-site API stability.
+  const triggerPad = size === "sm" ? "px-3.5" : "px-4";
 
   return (
     <>
+      {/*
+       * Always-mounted <audio> element. We need it in the DOM at click
+       * time (not just when audioUrl exists) so primeGesture() can call
+       * .play() on a real element synchronously inside the handler.
+       * Hidden via `hidden` so it doesn't take layout space when idle.
+       */}
+      <audio
+        ref={audioRef}
+        preload="none"
+        hidden={!audioUrl}
+        onLoadedMetadata={(e) => {
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) setDuration(d);
+        }}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onPlay={() => setStatus("playing")}
+        onPause={() => setStatus("paused")}
+        onEnded={() => setStatus("paused")}
+      />
+
       {/* Trigger button — slots into the share/stats row */}
       <button
         type="button"
@@ -243,11 +337,7 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         disabled={isWorking}
         aria-label={isWorking ? "Loading audio narration" : "Play article"}
         title="Listen to this article"
-        className={[
-          "inline-flex items-center gap-1.5 rounded-md border border-white/15 text-white/85 transition-colors hover:bg-[rgba(127,127,127,0.12)] disabled:opacity-60",
-          buttonSizeClass,
-          className ?? "",
-        ].join(" ")}
+        className={[triggerBase, triggerPad, className ?? ""].join(" ")}
       >
         {isWorking ? <SpinnerIcon /> : <PlayIcon />}
         <span>{status === "generating" ? "Generating…" : "Listen"}</span>
@@ -265,21 +355,20 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         <div
           role="region"
           aria-label="Article audio player"
-          className="fixed inset-x-2 bottom-3 z-40 mx-auto max-w-xl rounded-2xl border border-white/15 bg-black/85 px-3 py-2.5 shadow-2xl backdrop-blur sm:inset-x-auto sm:right-4"
+          className={[
+            "fixed inset-x-2 bottom-3 z-40 mx-auto max-w-xl rounded-2xl",
+            "border border-white/15 bg-black/85 px-3 py-2.5 backdrop-blur",
+            "sm:inset-x-auto sm:right-4",
+            // Pulses for ~5s on first mount of the player, then the
+            // resting ring (also defined in .pb-player-glow) takes
+            // over so the player stays discoverable without becoming
+            // visual noise. Reopening the player re-mounts this div
+            // so the entrance plays again — intentional.
+            "pb-player-glow",
+          ].join(" ")}
         >
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            preload="metadata"
-            onLoadedMetadata={(e) => {
-              const d = e.currentTarget.duration;
-              if (Number.isFinite(d) && d > 0) setDuration(d);
-            }}
-            onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-            onPlay={() => setStatus("playing")}
-            onPause={() => setStatus("paused")}
-            onEnded={() => setStatus("paused")}
-          />
+          {/* The audio element itself lives at the top of the component
+              so it's always mounted; here we just render controls. */}
 
           <div className="flex items-center gap-2.5">
             {status === "playing" ? (
@@ -366,8 +455,42 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
           </div>
         </div>
       ) : null}
+
+      {/* Now that the audio element lives outside the conditional, the
+          src attribute needs to track audioUrl. We set it imperatively
+          rather than via a JSX prop so removing the src on close
+          (handleClose) stays under our control. */}
+      <AudioSrcSync src={audioUrl} audioRef={audioRef} />
     </>
   );
+}
+
+/**
+ * Imperative bridge that syncs the audioUrl state onto the
+ * always-mounted <audio> element. Kept out of JSX so close/reset
+ * behaviour can fully unset src via removeAttribute() without React
+ * fighting us by re-asserting the prop.
+ */
+function AudioSrcSync({
+  src,
+  audioRef,
+}: {
+  src: string | null;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+}) {
+  React.useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (src) {
+      if (el.getAttribute("src") !== src) {
+        el.setAttribute("src", src);
+        el.load();
+      }
+    } else {
+      el.removeAttribute("src");
+    }
+  }, [src, audioRef]);
+  return null;
 }
 
 /* ---------- icons (12px stroke, currentColor) ---------- */
