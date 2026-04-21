@@ -68,127 +68,111 @@ export async function POST(_req: Request, { params }: Params) {
   const input = prepareNarrationInput(text);
 
   // ------------------------------------------------------------------
-  // Concurrency control: per-post advisory lock
+  // Cache check (no transaction needed for a single read)
   // ------------------------------------------------------------------
-  // The endpoint is publicly callable on every published post. Without a
-  // lock, N simultaneous "Listen" clicks (e.g. a post going viral) would
-  // each fire an independent TTS call and S3 upload — N× the OpenAI spend
-  // and last-writer-wins races on the S3 key. We use a Postgres
-  // transaction-scoped advisory lock keyed on the post id: the first
-  // request gets the lock and runs generation; concurrent requests bounce
-  // with a 202 + Retry-After so the client re-polls GET shortly after.
-  // pg_try_advisory_xact_lock auto-releases when the transaction ends
-  // (commit, rollback, or connection drop), so a stuck/crashed worker
-  // can't permanently block regeneration.
-  // ------------------------------------------------------------------
-  type TxResult =
-    | { kind: "in_progress" }
-    | {
-        kind: "cached" | "generated" | "regenerated";
-        key: string;
-        charCount: number;
-        durationSec: number;
-        voice: string;
-      };
+  if (post.audio && post.audio.voice === DEFAULT_VOICE) {
+    const drift =
+      Math.abs(input.length - post.audio.charCount) /
+      Math.max(post.audio.charCount, 1);
+    if (drift <= STALE_DELTA_RATIO) {
+      return NextResponse.json({
+        ok: true,
+        status: "cached" as const,
+        audioUrl: audioPublicUrlVersioned(
+          post.audio.audioKey,
+          post.audio.charCount,
+          post.audio.durationSec,
+        ),
+        durationSec: post.audio.durationSec,
+        voice: post.audio.voice,
+      });
+    }
+  }
 
-  let result: TxResult;
+  // ------------------------------------------------------------------
+  // Generate (no surrounding transaction)
+  // ------------------------------------------------------------------
+  // The previous version wrapped TTS + S3 + upsert in a Prisma
+  // `$transaction` so we could hold a per-post advisory lock for the
+  // full duration and prevent concurrent first-hit requests from each
+  // calling OpenAI ("thundering herd"). But Supabase's transaction-mode
+  // pgbouncer closes the tx around the 55-60s mark, and a long post can
+  // push TTS + upload past that, causing P2028 "Transaction already
+  // closed" failures (see commit history).
+  //
+  // Trade-off accepted for v1: drop the lock, accept that two readers
+  // who click "Listen" within ~30s of each other on a fresh post may
+  // each trigger a generation. Worst-case duplicate cost is ~$0.06 per
+  // collision (4k chars × $0.015 / 1k). Both writes hit the same stable
+  // S3 key so there is no orphaned storage; last-writer-wins on the
+  // PostAudio row, and the Postgres unique constraint on `postId`
+  // guarantees we never end up with duplicate rows.
+  //
+  // TODO(scale): when traffic grows, reintroduce a distributed lock via
+  // Vercel KV or Upstash Redis (SET NX with short TTL + 202 fallback)
+  // so we can safely deduplicate without holding a long-lived database
+  // transaction across the network round-trips.
+  // ------------------------------------------------------------------
+
+  let mp3: Buffer;
   try {
-    result = await prisma.$transaction(
-      async (tx): Promise<TxResult> => {
-        const lockRows = await tx.$queryRaw<Array<{ locked: boolean }>>`
-          SELECT pg_try_advisory_xact_lock(hashtextextended(${`audio:${post.id}`}, 0)) AS locked
-        `;
-        if (!lockRows[0]?.locked) {
-          return { kind: "in_progress" };
-        }
-
-        // Re-read inside the lock — another worker that won the race may
-        // have already generated fresh audio while we were waiting on the
-        // initial post lookup.
-        const fresh = await tx.postAudio.findUnique({
-          where: { postId: post.id },
-        });
-        if (fresh && fresh.voice === DEFAULT_VOICE) {
-          const drift =
-            Math.abs(input.length - fresh.charCount) /
-            Math.max(fresh.charCount, 1);
-          if (drift <= STALE_DELTA_RATIO) {
-            return {
-              kind: "cached",
-              key: fresh.audioKey,
-              charCount: fresh.charCount,
-              durationSec: fresh.durationSec,
-              voice: fresh.voice,
-            };
-          }
-        }
-
-        // Generate. Errors here roll back the transaction (which releases
-        // the advisory lock); the catch outside surfaces a 502.
-        const mp3 = await generateNarrationMp3(input, DEFAULT_VOICE);
-        const key = audioObjectKey(post.id, DEFAULT_VOICE);
-        await putAudioObject(key, mp3);
-        const durationSec = estimateMp3DurationSec(mp3.byteLength);
-        const charCount = input.length;
-
-        await tx.postAudio.upsert({
-          where: { postId: post.id },
-          create: {
-            postId: post.id,
-            voice: DEFAULT_VOICE,
-            audioKey: key,
-            durationSec,
-            charCount,
-          },
-          update: {
-            voice: DEFAULT_VOICE,
-            audioKey: key,
-            durationSec,
-            charCount,
-          },
-        });
-
-        return {
-          kind: post.audio ? "regenerated" : "generated",
-          key,
-          charCount,
-          durationSec,
-          voice: DEFAULT_VOICE,
-        };
-      },
-      // Cover slow TTS (~10-30s for a full post) + S3 upload comfortably,
-      // but stay under the route's maxDuration so we surface a clean 502
-      // rather than a function timeout.
-      { timeout: 55_000, maxWait: 5_000 },
-    );
+    mp3 = await generateNarrationMp3(input, DEFAULT_VOICE);
   } catch (err) {
-    console.error("[audio/generate] transaction failed:", err);
+    console.error("[audio/generate] TTS failed:", err);
     return NextResponse.json(
-      {
-        ok: false,
-        status: "tts_failed",
-        message: "Audio generation failed.",
-      },
+      { ok: false, status: "tts_failed", message: "Audio generation failed." },
       { status: 502 },
     );
   }
 
-  if (result.kind === "in_progress") {
+  const key = audioObjectKey(post.id, DEFAULT_VOICE);
+  try {
+    await putAudioObject(key, mp3);
+  } catch (err) {
+    console.error("[audio/generate] S3 upload failed:", err);
     return NextResponse.json(
-      {
-        ok: false,
-        status: "in_progress",
-        message: "Audio is being generated for this post; try again shortly.",
+      { ok: false, status: "storage_failed", message: "Audio upload failed." },
+      { status: 502 },
+    );
+  }
+
+  const durationSec = estimateMp3DurationSec(mp3.byteLength);
+  const charCount = input.length;
+
+  try {
+    await prisma.postAudio.upsert({
+      where: { postId: post.id },
+      create: {
+        postId: post.id,
+        voice: DEFAULT_VOICE,
+        audioKey: key,
+        durationSec,
+        charCount,
       },
-      { status: 202, headers: { "Retry-After": "5" } },
+      update: {
+        voice: DEFAULT_VOICE,
+        audioKey: key,
+        durationSec,
+        charCount,
+      },
+    });
+  } catch (err) {
+    // The audio object is already in S3 at this point; surface the DB
+    // failure but don't try to delete from S3 — the next request will
+    // either find the orphan via key collision (and overwrite) or, if
+    // the upsert succeeds next time, the URL will already work.
+    console.error("[audio/generate] PostAudio upsert failed:", err);
+    return NextResponse.json(
+      { ok: false, status: "db_failed", message: "Audio metadata save failed." },
+      { status: 502 },
     );
   }
 
   return NextResponse.json({
     ok: true,
-    status: result.kind,
-    audioUrl: audioPublicUrlVersioned(result.key, result.charCount, result.durationSec),
-    durationSec: result.durationSec,
-    voice: result.voice,
+    status: post.audio ? ("regenerated" as const) : ("generated" as const),
+    audioUrl: audioPublicUrlVersioned(key, charCount, durationSec),
+    durationSec,
+    voice: DEFAULT_VOICE,
   });
 }
