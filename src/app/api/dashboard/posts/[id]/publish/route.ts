@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidateTag } from "next/cache";
 
 import { z } from "zod";
@@ -7,6 +7,10 @@ import { prisma } from "@/lib/db";
 import { publishPostSchema } from "@/lib/validators/posts";
 import { requireUserAndPostId, type IdCtx, jsonError } from "@/lib/server/route-helpers";
 import { ERROR_CODES } from "@/lib/server/error-codes";
+import {
+  claimAudioGeneration,
+  runAudioGeneration,
+} from "@/lib/server/audioPipeline";
 
 export async function PATCH(req: Request, ctx: IdCtx) {
   const auth = await requireUserAndPostId(ctx);
@@ -49,6 +53,22 @@ export async function PATCH(req: Request, ctx: IdCtx) {
 
   revalidateTag("public-posts", "default");
   revalidateTag(`public-post:${post.slug}`, "default");
+
+  // Pre-warm the audio narration when the post becomes public so
+  // readers don't wait the 30-60s TTS round-trip on first listen.
+  // Fire-and-forget: never blocks the response, never throws.
+  if (post.publishedAt) {
+    after(async () => {
+      try {
+        const claim = await claimAudioGeneration(post.slug);
+        if (claim.kind === "claimed") {
+          await runAudioGeneration(claim.postId, claim.input);
+        }
+      } catch (err) {
+        console.error("[publish] audio prewarm failed:", err);
+      }
+    });
+  }
 
   return NextResponse.json({ ok: true as const, post });
 }
