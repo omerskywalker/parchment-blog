@@ -5,20 +5,33 @@ import * as React from "react";
 type AudioStatus =
   | "idle"
   | "loading" // initial GET in flight
-  | "generating" // POST /generate in flight (first listener)
+  | "generating" // POST kicked off + polling for ready
   | "ready" // audio loaded; not playing
   | "playing"
   | "paused"
   | "error";
 
-type AudioResponse =
+type AudioGetResponse =
   | {
       ok: true;
-      status: "cached" | "generated" | "regenerated";
+      status: "ready";
       audioUrl: string;
       durationSec: number;
       voice: string;
     }
+  | { ok: true; status: "pending" }
+  | { ok: false; status: "failed"; message?: string }
+  | { ok: false; status: string; message?: string };
+
+type AudioPostResponse =
+  | {
+      ok: true;
+      status: "ready";
+      audioUrl: string;
+      durationSec: number;
+      voice: string;
+    }
+  | { ok: true; status: "pending" }
   | { ok: false; status: string; message?: string };
 
 type Props = {
@@ -32,6 +45,11 @@ type Props = {
 const SPEEDS = [1, 1.25, 1.5, 2] as const;
 type Speed = (typeof SPEEDS)[number];
 
+/** How often to poll GET /audio while a background worker is generating. */
+const POLL_INTERVAL_MS = 3000;
+/** Hard ceiling so a permanently-stuck PENDING row doesn't poll forever. */
+const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+
 function formatTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
   const m = Math.floor(sec / 60);
@@ -39,16 +57,26 @@ function formatTime(sec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * "Play article" button + floating mini-player.
  *
  * Lifecycle:
- *   1. Click Play → GET /audio. If 404/410 → POST /generate (shows
- *      "Generating…" state). If 200 → straight to ready.
- *   2. Audio element loads the MP3, then auto-plays.
- *   3. Floating bar appears bottom-right (desktop) / bottom-center
+ *   1. Click Play → GET /audio.
+ *      - 200 ready → straight to player.
+ *      - 200 pending → another tab/user already kicked off a worker;
+ *        start polling.
+ *      - 404 missing / 410 stale → POST /generate to claim a worker,
+ *        then start polling.
+ *      - failed/ineligible → show error.
+ *   2. Polling: GET /audio every POLL_INTERVAL_MS until ready or failed.
+ *   3. Audio element loads the MP3, then auto-plays.
+ *   4. Floating bar appears bottom-right (desktop) / bottom-center
  *      (mobile) with scrub bar + speed + close.
- *   4. Close dismisses the player. State resets on next click.
+ *   5. Close dismisses the player. State resets on next click.
  */
 export function PostAudioPlayer({ slug, title, size = "md", className }: Props) {
   const [status, setStatus] = React.useState<AudioStatus>("idle");
@@ -59,6 +87,12 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   const [speed, setSpeed] = React.useState<Speed>(1);
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  /**
+   * Cancellation flag. When the user closes the player mid-generation
+   * we want to stop polling immediately rather than letting the loop
+   * race with subsequent clicks.
+   */
+  const cancelledRef = React.useRef(false);
 
   // Keep playbackRate in sync with state.
   React.useEffect(() => {
@@ -67,20 +101,62 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
 
   const isWorking = status === "loading" || status === "generating";
 
-  async function fetchOrGenerate(): Promise<AudioResponse> {
+  /**
+   * Poll GET /audio until status flips out of `pending`. Resolves with
+   * the ready response or throws on failure / timeout / cancellation.
+   */
+  async function pollUntilReady(): Promise<AudioGetResponse> {
+    const startedAt = Date.now();
+    while (true) {
+      if (cancelledRef.current) {
+        throw new Error("cancelled");
+      }
+      await sleep(POLL_INTERVAL_MS);
+      if (cancelledRef.current) {
+        throw new Error("cancelled");
+      }
+
+      const res = await fetch(`/api/posts/${slug}/audio`, { cache: "no-store" });
+      const data = (await res.json()) as AudioGetResponse;
+
+      if (data.ok && data.status === "ready") return data;
+      if (!data.ok && data.status === "failed") {
+        throw new Error(data.message ?? "Audio generation failed.");
+      }
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        throw new Error("Audio generation timed out. Try again.");
+      }
+      // Otherwise still pending — loop.
+    }
+  }
+
+  async function fetchOrGenerate(): Promise<AudioGetResponse> {
     // Try cache first.
     const getRes = await fetch(`/api/posts/${slug}/audio`, { cache: "no-store" });
-    if (getRes.ok) {
-      return (await getRes.json()) as AudioResponse;
+    const getData = (await getRes.json()) as AudioGetResponse;
+
+    if (getRes.ok && getData.ok && getData.status === "ready") {
+      return getData;
     }
-    // 404 (missing), 410 (stale), 422 (ineligible) → regenerate. The
-    // generate route returns 422 itself for ineligible; let that propagate.
+
+    if (getRes.ok && getData.ok && getData.status === "pending") {
+      // A worker is already running (kicked off by another client). Poll.
+      setStatus("generating");
+      return pollUntilReady();
+    }
+
+    // 404 missing / 410 stale / failed → claim a fresh generation.
     setStatus("generating");
     const postRes = await fetch(`/api/posts/${slug}/audio/generate`, {
       method: "POST",
       cache: "no-store",
     });
-    return (await postRes.json()) as AudioResponse;
+    const postData = (await postRes.json()) as AudioPostResponse;
+
+    if (postData.ok && postData.status === "ready") return postData;
+    if (postData.ok && postData.status === "pending") return pollUntilReady();
+    // Producer-side error (not_configured, ineligible, not_found, etc.).
+    return postData as AudioGetResponse;
   }
 
   async function handlePlay() {
@@ -88,18 +164,21 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       audioRef.current.play().catch(() => undefined);
       return;
     }
+    cancelledRef.current = false;
     setStatus("loading");
     setErrorMsg(null);
     try {
       const data = await fetchOrGenerate();
-      if (!data.ok) {
+      if (cancelledRef.current) return;
+      if (!data.ok || data.status !== "ready") {
         setStatus("error");
-        setErrorMsg(
-          data.message ??
-            (data.status === "ineligible"
-              ? "This post is too short to narrate."
-              : "Couldn't load audio. Try again."),
-        );
+        const fallback =
+          data.status === "ineligible"
+            ? "This post is too short to narrate."
+            : data.status === "not_configured"
+              ? "Audio narration isn't configured on this site."
+              : "Couldn't load audio. Try again.";
+        setErrorMsg(("message" in data && data.message) || fallback);
         return;
       }
       setAudioUrl(data.audioUrl);
@@ -110,9 +189,14 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         audioRef.current?.play().catch(() => undefined);
       });
     } catch (err) {
+      if (cancelledRef.current) return;
       console.error("audio fetch failed", err);
       setStatus("error");
-      setErrorMsg("Network error. Try again.");
+      setErrorMsg(
+        err instanceof Error && err.message !== "cancelled"
+          ? err.message
+          : "Network error. Try again.",
+      );
     }
   }
 
@@ -136,6 +220,7 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   }
 
   function handleClose() {
+    cancelledRef.current = true;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
