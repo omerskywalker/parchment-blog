@@ -49,6 +49,17 @@ const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 /** Throttle: how often to persist the playback position. */
 const POSITION_SAVE_INTERVAL_MS = 5_000;
+/**
+ * Tiny silent WAV (0.05s, 8kHz mono 8-bit, ~592 chars b64). Played
+ * synchronously inside the click handler to consume the user-gesture
+ * grant on the actual <audio> element so a later play() — after the
+ * 30–60s generation window — is allowed by Safari/iOS. An empty-src
+ * play() does NOT count as user-activation on WebKit; only a real,
+ * decodable source does.
+ */
+const SILENT_AUDIO_DATA_URL =
+  "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+
 /** Refresh cadence for the animated "Generating…" dots + hint. */
 const GENERATING_TICK_MS = 400;
 
@@ -246,19 +257,42 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   function primeGesture() {
     const el = audioRef.current;
     if (!el) return;
+    if (gesturePrimedRef.current) return; // Already unlocked for the page.
     try {
-      el.play().then(
-        () => {
-          gesturePrimedRef.current = true;
-        },
-        () => {
-          // Even on rejection (no src), Chromium has now seen a
-          // synchronous play() inside a gesture for this element.
-          gesturePrimedRef.current = true;
-        },
-      );
+      // Mute so the silent sample is doubly inaudible — and so even if a
+      // codec quirk emits a click, the user never hears it.
+      el.muted = true;
+      el.src = SILENT_AUDIO_DATA_URL;
+      el.load();
+      const p = el.play();
+      // Tag as primed regardless — once we've issued a play() inside a
+      // gesture WebKit/Chromium will allow subsequent ones.
+      gesturePrimedRef.current = true;
+      if (p && typeof p.then === "function") {
+        p.then(
+          () => {
+            // Stop the silent loop immediately; we just needed the
+            // activation, not actual playback.
+            try {
+              el.pause();
+              el.muted = false;
+            } catch {
+              /* ignore */
+            }
+          },
+          () => {
+            // Even on rejection (rare for a valid data URL), the gesture
+            // has been consumed for this element. Restore unmuted state.
+            try {
+              el.muted = false;
+            } catch {
+              /* ignore */
+            }
+          },
+        );
+      }
     } catch {
-      /* ignore */
+      /* ignore — non-fatal; user can tap the visible play button */
     }
   }
 
@@ -364,13 +398,19 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
    * coherent group rather than a stack of mismatched pills.
    */
   const triggerHeight = "h-10";
+  // Press feedback: hover lifts +1px, active drops back AND scales to
+  // 0.97 with a stronger background — gives a satisfying "press down"
+  // tactile feel that matches the fire/copy/share buttons but is a
+  // touch more pronounced because Listen is the primary action here.
   const triggerBase =
     `${triggerHeight} inline-flex items-center justify-center gap-2 ` +
     `rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white/85 ` +
-    `transition-[transform,background-color,border-color,box-shadow,opacity] duration-200 ` +
-    `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] active:translate-y-0 ` +
+    `transition-[transform,background-color,border-color,box-shadow,opacity] duration-150 ` +
+    `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] ` +
+    `active:translate-y-0 active:scale-[0.97] active:bg-black/55 active:border-white/30 ` +
     `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ` +
-    `disabled:opacity-60 disabled:hover:translate-y-0 cursor-pointer`;
+    `disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ` +
+    `cursor-pointer`;
   const triggerPad = size === "sm" ? "px-3.5" : "px-4";
 
   // (D) Compute the "Generating…" copy fresh on each render. The
@@ -391,10 +431,14 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         hidden={!audioUrl}
         src={audioUrl ?? undefined}
         onLoadedMetadata={(e) => {
+          // Skip metadata events from the silent-prime audio — its
+          // 0.05s duration would briefly clobber the real value.
+          if (!audioUrl) return;
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setDuration(d);
         }}
         onTimeUpdate={(e) => {
+          if (!audioUrl) return; // ignore prime-audio ticks
           const t = e.currentTarget.currentTime;
           setCurrentTime(t);
           // (A) Throttled save — once every POSITION_SAVE_INTERVAL_MS.
@@ -405,9 +449,12 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
           }
         }}
         onPlay={() => {
+          // The silent-audio gesture-priming play() also fires this
+          // event. Gate everything behind the presence of a real URL.
+          if (!audioUrl) return;
           setStatus("playing");
           // (H) Fire 'start' once per audio URL — not every play/pause.
-          if (audioUrl && trackedStartRef.current !== audioUrl) {
+          if (trackedStartRef.current !== audioUrl) {
             trackedStartRef.current = audioUrl;
             try {
               track("audio_listen_start", { slug });
@@ -416,7 +463,10 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
             }
           }
         }}
-        onPause={() => setStatus("paused")}
+        onPause={() => {
+          if (!audioUrl) return;
+          setStatus("paused");
+        }}
         onEnded={() => {
           setStatus("paused");
           // (A) Listened to the end → don't restore from the tail next time.
@@ -440,9 +490,23 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         className={[triggerBase, triggerPad, className ?? ""].join(" ")}
       >
         {isWorking ? <SpinnerIcon /> : <PlayIcon />}
-        <span>
-          {status === "generating" ? `Generating${dots}` : "Listen"}
-        </span>
+        {status === "generating" ? (
+          // Pin "Generating" in place; the dots get a fixed-width
+          // left-aligned slot so adding/removing one doesn't shift the
+          // rest of the label. Without this, justify-center recentres
+          // the whole label on every animation frame.
+          <span className="inline-flex items-baseline">
+            <span>Generating</span>
+            <span
+              aria-hidden="true"
+              className="ml-px inline-block w-3 text-left tabular-nums"
+            >
+              {dots}
+            </span>
+          </span>
+        ) : (
+          <span>Listen</span>
+        )}
       </button>
 
       {/* Inline error toast (lightweight, lives next to the button) */}
@@ -462,18 +526,53 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       {/* Floating player */}
       {audioUrl ? (
         minimized ? (
-          <button
-            type="button"
-            onClick={() => setMinimized(false)}
-            aria-label="Expand audio player"
+          // The minimized bubble's primary action is play/pause —
+          // matches the icon shown. Expanding lives on a small caret
+          // in the corner so it's discoverable but doesn't steal the
+          // tap target. Tapping the icon was previously expanding the
+          // player which felt completely wrong: an obvious play/pause
+          // button that doesn't play or pause.
+          <div
             className={[
-              "fixed bottom-3 right-3 z-40 flex h-12 w-12 items-center justify-center",
-              "rounded-full border border-white/15 bg-black/85 text-white backdrop-blur",
-              "pb-player-glow",
+              "fixed bottom-3 right-3 z-40",
+              "pb-player-glow rounded-full",
             ].join(" ")}
           >
-            {status === "playing" ? <PauseIcon /> : <PlayIcon />}
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = audioRef.current;
+                if (!el) return;
+                if (el.paused) el.play().catch(() => undefined);
+                else el.pause();
+              }}
+              aria-label={status === "playing" ? "Pause" : "Play"}
+              title={status === "playing" ? "Pause" : "Play"}
+              className={[
+                "flex h-12 w-12 items-center justify-center",
+                "rounded-full border border-white/15 bg-black/85 text-white backdrop-blur",
+                "transition-transform duration-150",
+                "active:scale-[0.93] hover:bg-black/90",
+                "cursor-pointer",
+              ].join(" ")}
+            >
+              {status === "playing" ? <PauseIcon /> : <PlayIcon />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMinimized(false)}
+              aria-label="Expand audio player"
+              title="Expand"
+              className={[
+                "absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center",
+                "rounded-full border border-white/20 bg-black text-white/85",
+                "transition-transform duration-150 hover:scale-110 active:scale-95",
+                "cursor-pointer",
+              ].join(" ")}
+            >
+              <ExpandIcon />
+            </button>
+          </div>
         ) : (
           <div
             role="region"
@@ -623,6 +722,25 @@ function CloseIcon() {
       strokeLinecap="round"
     >
       <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="9"
+      height="9"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Two arrows pointing outward — universal "expand" affordance */}
+      <path d="M3 7V3h4M13 9v4H9" />
     </svg>
   );
 }
