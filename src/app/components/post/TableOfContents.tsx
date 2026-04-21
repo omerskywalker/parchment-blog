@@ -33,7 +33,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
 
   return (
     <nav aria-label="Table of contents" className="hidden xl:block">
-      <div className="sticky top-24 w-52 shrink-0">
+      <div className="sticky top-24 w-52 shrink-0 2xl:w-64">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/30">
           On this page
         </p>

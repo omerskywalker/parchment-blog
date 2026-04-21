@@ -56,6 +56,11 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://vercel.live",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.amazonaws.com https://avatars.githubusercontent.com https://lh3.googleusercontent.com",
+      // media-src whitelists sources for <audio>/<video>. Audio narrations
+      // are served from the same S3 bucket as avatars; without this rule
+      // the browser silently refuses to load the mp3 (default-src fallback
+      // is 'self', which excludes S3).
+      "media-src 'self' https://*.amazonaws.com",
       "font-src 'self'",
       "connect-src 'self' https://*.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com",
       "frame-ancestors 'none'",

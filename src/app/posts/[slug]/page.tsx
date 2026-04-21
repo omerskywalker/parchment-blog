@@ -11,6 +11,7 @@ import PostStatsBar from "@/app/components/post/PostStatsBar";
 import Markdown from "@/app/components/Markdown";
 import { TagChips } from "@app/components/TagChips";
 import { PostShareActions } from "@app/components/post/PostShareActions";
+import { PostAudioPlayer } from "@app/components/post/PostAudioPlayer";
 import { RelatedPosts } from "@app/components/post/RelatedPosts";
 import { PrevNextNav } from "@app/components/post/PrevNextNav";
 import { s3PublicUrlFromKey } from "@/lib/s3";
@@ -125,7 +126,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
       <ReadingProgressBar />
 
-      <main className="mx-auto max-w-[845px] px-4 py-10">
+      <main className="mx-auto max-w-[845px] px-4 py-10 xl:max-w-[1180px] 2xl:max-w-[1320px]">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/posts"
@@ -135,7 +136,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
           </Link>
         </div>
 
-        <div className="mt-6 flex items-start gap-10">
+        <div className="mt-6 flex items-start gap-10 xl:gap-12 2xl:gap-16">
           <article className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 sm:p-8">
             {/*
              * Title gets its own row so it can use the full content width —
@@ -157,6 +158,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                 stretch={false}
               />
               <PostShareActions title={post.title} size="md" />
+              <PostAudioPlayer slug={post.slug} title={post.title} size="md" />
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
@@ -219,6 +221,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
                   className="w-full"
                 />
                 <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
+                <PostAudioPlayer slug={post.slug} title={post.title} size="sm" className="w-full justify-center" />
               </div>
             </div>
 

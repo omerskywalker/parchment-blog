@@ -50,11 +50,41 @@ model Post {
   fireCount Int            @default(0)
   reactions PostReaction[]
   fireNotifications FireNotification[]
+  audio     PostAudio?
 
   @@index([authorId])
   @@index([publishedAt])
   @@index([updatedAt])
   @@index([scheduledAt])
+}
+
+/// One generated audio narration per post. Lazily populated on first
+/// listener; invalidated when the source markdown drifts materially.
+///
+/// Generation is asynchronous (Vercel `after()` background work) because
+/// TTS for long posts can exceed the function timeout. The row is written
+/// at claim-time with `status = PENDING` and fields filled in once the
+/// worker finishes (`READY`) or errors out (`FAILED`). The audio fields
+/// are nullable so we can persist the claim before bytes exist.
+model PostAudio {
+  id          String          @id @default(cuid())
+  postId      String          @unique
+  voice       String          @default("onyx")
+  status      PostAudioStatus @default(READY)
+  audioKey    String?
+  durationSec Int?
+  charCount   Int?
+  error       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+enum PostAudioStatus {
+  PENDING
+  READY
+  FAILED
 }
 
 enum ReactionKind {
