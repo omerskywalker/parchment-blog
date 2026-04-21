@@ -27,7 +27,13 @@ export function ThemeToggle() {
   const [theme, setTheme] = React.useState<Theme | null>(null);
 
   React.useEffect(() => {
-    setTheme(readStoredTheme());
+    // Read whatever the boot script already settled on (cookie first,
+    // then legacy localStorage) and re-apply it. The re-apply is what
+    // migrates legacy localStorage-only users onto the cookie without
+    // forcing them to manually toggle the theme.
+    const current = readStoredTheme();
+    applyTheme(current);
+    setTheme(current);
   }, []);
 
   if (theme === null) {
