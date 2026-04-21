@@ -1,6 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/db";
+import {
+  claimAudioGeneration,
+  runAudioGeneration,
+} from "@/lib/server/audioPipeline";
 
 /**
  * GET /api/cron/publish-scheduled
@@ -54,6 +58,33 @@ export async function GET(req: Request) {
   for (const post of due) {
     revalidateTag(`public-post:${post.slug}`, "default");
   }
+
+  // Pre-warm audio narration for the just-published batch so readers
+  // don't pay the TTS wait on first listen. Each claim is idempotent
+  // and non-blocking; failures are logged + persisted to the row.
+  after(async () => {
+    const claims = await Promise.all(
+      due.map(async (post) => {
+        try {
+          const result = await claimAudioGeneration(post.slug);
+          return result.kind === "claimed"
+            ? { postId: result.postId, input: result.input }
+            : null;
+        } catch (err) {
+          console.error("[publish-scheduled] claim failed:", post.slug, err);
+          return null;
+        }
+      }),
+    );
+    const work = claims.filter(
+      (c): c is { postId: string; input: string } => c !== null,
+    );
+    if (work.length > 0) {
+      await Promise.allSettled(
+        work.map((c) => runAudioGeneration(c.postId, c.input)),
+      );
+    }
+  });
 
   return NextResponse.json({ ok: true, published: due.length });
 }
