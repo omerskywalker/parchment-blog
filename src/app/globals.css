@@ -502,7 +502,9 @@ button {
    ============================================================ */
 
 .pb-player-glow {
-  animation: pb-player-pulse 1.6s ease-in-out 0s 3 both;
+  /* Two 1s pulses = 2s entrance — long enough to register, short
+     enough to get out of the way before the reader engages. */
+  animation: pb-player-pulse 1s ease-in-out 0s 2 both;
   /* Resting ring after the pulse finishes — subtle, but more
      present than the bare border-white/15 the player ships with. */
   box-shadow:
