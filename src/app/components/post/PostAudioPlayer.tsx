@@ -594,9 +594,16 @@ export function PostAudioPlayer({
   // Default = dark pill matching Fire/Post/Share. Primary = inverted
   // white-on-black, the only inverted control on the page so it reads
   // as the headline action without needing a brand color.
+  // Primary gets a heavier weight + slightly enlarged icon. Pure black on
+  // pure white is technically 21:1 contrast, but at text-sm + font-medium
+  // the letters read thin/anemic — there's no halation to fatten them up
+  // the way light-on-dark does. Bumping to font-semibold + scaling the
+  // play/pause glyph via the descendant selector restores the visual
+  // weight without changing the layout box.
   const triggerVariant =
     variant === "primary"
-      ? `border-white bg-white text-black ` +
+      ? `border-white bg-white text-black font-semibold ` +
+        `[&>svg]:h-3.5 [&>svg]:w-3.5 ` +
         `hover:bg-white/95 hover:border-white ` +
         `active:bg-white/85 active:border-white ` +
         `focus-visible:ring-white/40`
