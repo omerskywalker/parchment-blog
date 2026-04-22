@@ -41,6 +41,15 @@ type Props = {
   /** Match PostShareActions / PostStatsBar sizing. */
   size?: "sm" | "md";
   className?: string;
+  /**
+   * Trigger button styling.
+   * - "default": dark pill that blends into the action row.
+   * - "primary": inverted white-on-black, used when Listen is the
+   *   headline CTA on its own row. Listen creates value the reader
+   *   doesn't otherwise have, so it gets the only inverted button
+   *   on the page — instantly readable as the primary action.
+   */
+  variant?: "default" | "primary";
 };
 
 /** How often to poll GET /audio while a background worker is generating. */
@@ -81,7 +90,13 @@ function sleep(ms: number): Promise<void> {
  *   - DOM-bound side effects (audio element, keyboard, body padding),
  *   - the user-gesture priming required for autoplay.
  */
-export function PostAudioPlayer({ slug, title, size = "md", className }: Props) {
+export function PostAudioPlayer({
+  slug,
+  title,
+  size = "md",
+  className,
+  variant = "default",
+}: Props) {
   const [status, setStatus] = React.useState<AudioStatus>("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
@@ -565,15 +580,31 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   // 0.97 with a stronger background — gives a satisfying "press down"
   // tactile feel that matches the fire/copy/share buttons but is a
   // touch more pronounced because Listen is the primary action here.
-  const triggerBase =
+  // Structural classes only — colors are split out into triggerVariant
+  // so the inverted "primary" treatment can swap them without losing
+  // the layout, transition, and focus-ring rules.
+  const triggerStructure =
     `${triggerHeight} inline-flex items-center justify-center gap-2 ` +
-    `rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white/85 ` +
+    `rounded-xl border px-4 text-sm font-medium ` +
     `transition-[transform,background-color,border-color,box-shadow,opacity] duration-150 ` +
-    `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] ` +
-    `active:translate-y-0 active:scale-[0.97] active:bg-black/55 active:border-white/30 ` +
-    `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ` +
+    `hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.97] ` +
+    `focus-visible:outline-none focus-visible:ring-2 ` +
     `disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ` +
     `cursor-pointer`;
+  // Default = dark pill matching Fire/Post/Share. Primary = inverted
+  // white-on-black, the only inverted control on the page so it reads
+  // as the headline action without needing a brand color.
+  const triggerVariant =
+    variant === "primary"
+      ? `border-white bg-white text-black ` +
+        `hover:bg-white/95 hover:border-white ` +
+        `active:bg-white/85 active:border-white ` +
+        `focus-visible:ring-white/40`
+      : `border-white/10 bg-black/30 text-white/85 ` +
+        `hover:bg-black/45 hover:border-white/25 ` +
+        `active:bg-black/55 active:border-white/30 ` +
+        `focus-visible:ring-white/20`;
+  const triggerBase = `${triggerStructure} ${triggerVariant}`;
   const triggerPad = size === "sm" ? "px-3.5" : "px-4";
 
   // (D) Compute the "Generating…" copy fresh on each render. The
