@@ -41,6 +41,15 @@ type Props = {
   /** Match PostShareActions / PostStatsBar sizing. */
   size?: "sm" | "md";
   className?: string;
+  /**
+   * Trigger button styling.
+   * - "default": dark pill that blends into the action row.
+   * - "primary": inverted white-on-black, used when Listen is the
+   *   headline CTA on its own row. Listen creates value the reader
+   *   doesn't otherwise have, so it gets the only inverted button
+   *   on the page — instantly readable as the primary action.
+   */
+  variant?: "default" | "primary";
 };
 
 /** How often to poll GET /audio while a background worker is generating. */
@@ -49,6 +58,17 @@ const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 /** Throttle: how often to persist the playback position. */
 const POSITION_SAVE_INTERVAL_MS = 5_000;
+/**
+ * Tiny silent WAV (0.05s, 8kHz mono 8-bit, ~592 chars b64). Played
+ * synchronously inside the click handler to consume the user-gesture
+ * grant on the actual <audio> element so a later play() — after the
+ * 30–60s generation window — is allowed by Safari/iOS. An empty-src
+ * play() does NOT count as user-activation on WebKit; only a real,
+ * decodable source does.
+ */
+const SILENT_AUDIO_DATA_URL =
+  "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
+
 /** Refresh cadence for the animated "Generating…" dots + hint. */
 const GENERATING_TICK_MS = 400;
 
@@ -70,7 +90,13 @@ function sleep(ms: number): Promise<void> {
  *   - DOM-bound side effects (audio element, keyboard, body padding),
  *   - the user-gesture priming required for autoplay.
  */
-export function PostAudioPlayer({ slug, title, size = "md", className }: Props) {
+export function PostAudioPlayer({
+  slug,
+  title,
+  size = "md",
+  className,
+  variant = "default",
+}: Props) {
   const [status, setStatus] = React.useState<AudioStatus>("idle");
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [audioUrl, setAudioUrl] = React.useState<string | null>(null);
@@ -99,6 +125,17 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   const gesturePrimedRef = React.useRef(false);
   /** Last time we persisted position — throttle saves to once per N ms. */
   const lastPositionSaveRef = React.useRef(0);
+  /**
+   * In-memory mirror of the current playback position. Updated on
+   * every meaningful tick (timeupdate, pause, scrub, close) and used
+   * as the authoritative source on reopen. We also persist to
+   * localStorage for cross-page-load survival, but the ref wins
+   * within a session — that way a teardown event firing AFTER the
+   * audio element has been reset (currentTime = 0) can't clobber
+   * the real value the user reached. This is the reason a second
+   * close → reopen used to silently start from 0.
+   */
+  const sessionPositionRef = React.useRef(0);
   /** Whether we've fired the analytics 'start' event for this URL. */
   const trackedStartRef = React.useRef<string | null>(null);
 
@@ -106,6 +143,38 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, audioUrl]);
+
+  // Pre-fetch cached audio metadata on mount. If the narration already
+  // exists in storage, populate audioUrl synchronously without playing
+  // — that way a later Listen tap can call play() directly inside the
+  // user gesture (no silent-WAV race, no NotAllowedError on iOS Safari
+  // for cached articles). Generation is still gated behind an explicit
+  // tap; we never kick off a TTS job without intent.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/posts/${slug}/audio`, { cache: "no-store" });
+        if (cancelled || !res.ok) return;
+        const data = (await res.json()) as PollResponse;
+        if (cancelled) return;
+        if (data.ok && data.status === "ready") {
+          setAudioUrl(data.audioUrl);
+          setDuration(data.durationSec);
+          // Status stays "idle" deliberately. We don't render the
+          // floating player or pad the body until the user actually
+          // taps Listen — pre-fetching is purely to win the iOS
+          // gesture race (real src already on the element, so the
+          // first play() call is synchronous inside the gesture).
+        }
+      } catch {
+        /* network hiccup — user can still click Listen to retry */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
 
   // (D) While generating, tick state so dots + hint refresh on screen.
   React.useEffect(() => {
@@ -116,8 +185,10 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
 
   // (C) Pad the bottom of <body> when the player is visible so the
   // floating bar doesn't cover the last paragraph of the article.
+  // Gated on status so a pre-fetched-but-unopened player doesn't
+  // shove every article down by 6.5rem.
   React.useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl || status === "idle") return;
     const body = document.body;
     body.classList.add(BODY_PADDED_CLASS);
     // Inline style is more robust than depending on a Tailwind util that
@@ -128,13 +199,41 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
       body.classList.remove(BODY_PADDED_CLASS);
       body.style.paddingBottom = previous;
     };
-  }, [audioUrl]);
+  }, [audioUrl, status]);
+
+  // Persist playback position when the page is hidden or unloaded.
+  // Mobile Safari aggressively throttles JS in backgrounded tabs and
+  // doesn't always fire 'pause' before the page is frozen, so we
+  // also listen for visibilitychange + pagehide as the most reliable
+  // checkpoints to capture the latest position.
+  React.useEffect(() => {
+    if (!audioUrl) return;
+    function flush() {
+      const el = audioRef.current;
+      if (!el) return;
+      // Don't overwrite a saved position with 0 if the element was
+      // reset for any reason — only meaningful positions get saved.
+      saveAudioPosition(slug, el.currentTime);
+    }
+    function onVisibility() {
+      if (document.visibilityState === "hidden") flush();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [audioUrl, slug]);
 
   // (B) Keyboard shortcuts while a player is open: space toggles,
   // arrows skip ±15s. Ignored when typing in form fields so we don't
   // hijack the seek-bar's keyboard interactions.
   React.useEffect(() => {
-    if (!audioUrl) return;
+    // Only bind keyboard shortcuts after the user has opened the
+    // player — otherwise pre-fetched audio would silently capture
+    // space-bar from anyone scrolling an article.
+    if (!audioUrl || status === "idle") return;
     function isFormField(el: EventTarget | null): boolean {
       if (!(el instanceof HTMLElement)) return false;
       const tag = el.tagName;
@@ -168,7 +267,7 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     return () => window.removeEventListener("keydown", onKey);
     // skipBy / handlers reach for refs, no closure issue.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audioUrl]);
+  }, [audioUrl, status]);
 
   const isWorking = status === "loading" || status === "generating";
 
@@ -246,19 +345,42 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   function primeGesture() {
     const el = audioRef.current;
     if (!el) return;
+    if (gesturePrimedRef.current) return; // Already unlocked for the page.
     try {
-      el.play().then(
-        () => {
-          gesturePrimedRef.current = true;
-        },
-        () => {
-          // Even on rejection (no src), Chromium has now seen a
-          // synchronous play() inside a gesture for this element.
-          gesturePrimedRef.current = true;
-        },
-      );
+      // Mute so the silent sample is doubly inaudible — and so even if a
+      // codec quirk emits a click, the user never hears it.
+      el.muted = true;
+      el.src = SILENT_AUDIO_DATA_URL;
+      el.load();
+      const p = el.play();
+      // Tag as primed regardless — once we've issued a play() inside a
+      // gesture WebKit/Chromium will allow subsequent ones.
+      gesturePrimedRef.current = true;
+      if (p && typeof p.then === "function") {
+        p.then(
+          () => {
+            // Stop the silent loop immediately; we just needed the
+            // activation, not actual playback.
+            try {
+              el.pause();
+              el.muted = false;
+            } catch {
+              /* ignore */
+            }
+          },
+          () => {
+            // Even on rejection (rare for a valid data URL), the gesture
+            // has been consumed for this element. Restore unmuted state.
+            try {
+              el.muted = false;
+            } catch {
+              /* ignore */
+            }
+          },
+        );
+      }
     } catch {
-      /* ignore */
+      /* ignore — non-fatal; user can tap the visible play button */
     }
   }
 
@@ -269,9 +391,87 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
     el.currentTime = Math.max(0, Math.min(max || el.currentTime + deltaSec, el.currentTime + deltaSec));
   }
 
+  /**
+   * Seek-then-play that handles the case where metadata isn't loaded
+   * yet. Setting currentTime before loadedmetadata is unreliable in
+   * Safari — the browser may snap back to 0 once decoding starts. We
+   * defer the seek until readyState >= HAVE_METADATA, also bind to
+   * 'canplay' as a backstop, and re-verify after a brief delay
+   * because Safari occasionally accepts the seek then resets it
+   * during buffering.
+   */
+  function playWithSeek(el: HTMLAudioElement, seekTo: number) {
+    let seekDone = false;
+    const target = Number.isFinite(seekTo) && seekTo > 0 ? seekTo : 0;
+    const doSeek = () => {
+      if (seekDone) return;
+      if (target > 0) {
+        try {
+          el.currentTime = target;
+        } catch {
+          /* seek out of range — start from top */
+        }
+      }
+      seekDone = true;
+    };
+    if (el.readyState >= 1 /* HAVE_METADATA */) {
+      doSeek();
+    } else {
+      el.addEventListener("loadedmetadata", doSeek, { once: true });
+      // Some Safari builds skip 'loadedmetadata' on cached MP3s and
+      // jump straight to 'canplay'. Belt-and-suspenders: whichever
+      // fires first triggers the seek; the other becomes a no-op via
+      // seekDone.
+      el.addEventListener("canplay", doSeek, { once: true });
+    }
+    const playPromise = el.play();
+    // Safari fallback: if a moment after starting playback the cursor
+    // is still nowhere near the seek target, force the seek again.
+    // Only triggers when we asked for a real (non-zero) restore.
+    if (target > 0) {
+      window.setTimeout(() => {
+        if (
+          !el.paused &&
+          el.currentTime < target - 2 &&
+          Number.isFinite(el.duration) &&
+          target < el.duration
+        ) {
+          try {
+            el.currentTime = target;
+          } catch {
+            /* ignore */
+          }
+        }
+      }, 600);
+    }
+    return playPromise;
+  }
+
   async function handlePlay() {
+    // (1) Toggle behaviour: if the audio is already loaded, the
+    // trigger button doubles as a play/pause toggle so users get one
+    // primary control regardless of where they are on the page.
     if (audioUrl && audioRef.current) {
-      audioRef.current.play().catch(() => undefined);
+      const el = audioRef.current;
+      if (!el.paused) {
+        el.pause();
+        return;
+      }
+      // Resume — restore saved position if this is a fresh open
+      // (currentTime === 0 means the element was reset, e.g. after
+      // close/reopen, or this is the first play after a prefetch).
+      // Otherwise just continue from where we paused.
+      // Prefer the in-memory session ref over localStorage when both
+      // are populated — it survived any teardown writes that may have
+      // overwritten localStorage with a stale value.
+      const stored = Math.max(sessionPositionRef.current, loadAudioPosition(slug, duration));
+      const seekTo = el.currentTime > 0 ? 0 : stored;
+      // Reveal the floating player immediately. When the audio was
+      // pre-fetched, status is still "idle"; without this the user
+      // would tap Listen and see nothing happen until the network
+      // round-trip for the MP3 metadata completes.
+      if (status === "idle") setStatus("loading");
+      playWithSeek(el, seekTo).catch(() => undefined);
       return;
     }
 
@@ -309,10 +509,17 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         const el = audioRef.current;
         if (!el) return;
         el.playbackRate = speed;
-        // (A) Restore previous position if available.
-        const saved = loadAudioPosition(slug, data.durationSec);
-        if (saved > 0) el.currentTime = saved;
-        el.play().catch(() => {
+        // (A) Restore previous position if available — playWithSeek
+        // defers the seek until metadata is loaded so it actually
+        // sticks (Safari otherwise resets to 0 on decode start).
+        // Take the higher of the in-memory session ref (current
+        // tab) and localStorage (cross-load) — protects against
+        // any teardown event that wrote a stale value to storage.
+        const saved = Math.max(
+          sessionPositionRef.current,
+          loadAudioPosition(slug, data.durationSec),
+        );
+        playWithSeek(el, saved).catch(() => {
           // Safari / activation expired — user can tap the visible
           // play button on the now-glowing player. No error UI.
         });
@@ -343,11 +550,16 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
   function handleClose() {
     // Bumping generation cancels any in-flight loop without races.
     generationRef.current += 1;
-    if (audioRef.current) {
-      // Persist final position before silencing — user might re-open.
-      saveAudioPosition(slug, audioRef.current.currentTime);
-      audioRef.current.pause();
-    }
+    // Capture position BEFORE any teardown — pause(), src removal,
+    // and React re-renders can each reset el.currentTime to 0 at
+    // unpredictable points. Take the snapshot first, then write it
+    // to both the in-memory ref and localStorage so subsequent
+    // reset events can't clobber the saved value.
+    const live = audioRef.current?.currentTime ?? 0;
+    if (live > 0) sessionPositionRef.current = live;
+    saveAudioPosition(slug, sessionPositionRef.current);
+
+    audioRef.current?.pause();
     // Keep gesturePrimedRef true — once primed, stays primed for the
     // life of the page so reopening doesn't require re-priming.
     setAudioUrl(null);
@@ -364,13 +576,42 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
    * coherent group rather than a stack of mismatched pills.
    */
   const triggerHeight = "h-10";
-  const triggerBase =
+  // Press feedback: hover lifts +1px, active drops back AND scales to
+  // 0.97 with a stronger background — gives a satisfying "press down"
+  // tactile feel that matches the fire/copy/share buttons but is a
+  // touch more pronounced because Listen is the primary action here.
+  // Structural classes only — colors are split out into triggerVariant
+  // so the inverted "primary" treatment can swap them without losing
+  // the layout, transition, and focus-ring rules.
+  const triggerStructure =
     `${triggerHeight} inline-flex items-center justify-center gap-2 ` +
-    `rounded-xl border border-white/10 bg-black/30 px-4 text-sm text-white/85 ` +
-    `transition-[transform,background-color,border-color,box-shadow,opacity] duration-200 ` +
-    `hover:bg-black/45 hover:border-white/25 hover:-translate-y-[1px] active:translate-y-0 ` +
-    `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20 ` +
-    `disabled:opacity-60 disabled:hover:translate-y-0 cursor-pointer`;
+    `rounded-xl border px-4 text-sm font-medium ` +
+    `transition-[transform,background-color,border-color,box-shadow,opacity] duration-150 ` +
+    `hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.97] ` +
+    `focus-visible:outline-none focus-visible:ring-2 ` +
+    `disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ` +
+    `cursor-pointer`;
+  // Default = dark pill matching Fire/Post/Share. Primary = inverted
+  // white-on-black, the only inverted control on the page so it reads
+  // as the headline action without needing a brand color.
+  // Primary gets a heavier weight + slightly enlarged icon. Pure black on
+  // pure white is technically 21:1 contrast, but at text-sm + font-medium
+  // the letters read thin/anemic — there's no halation to fatten them up
+  // the way light-on-dark does. Bumping to font-semibold + scaling the
+  // play/pause glyph via the descendant selector restores the visual
+  // weight without changing the layout box.
+  const triggerVariant =
+    variant === "primary"
+      ? `border-white bg-white text-black font-semibold ` +
+        `[&>svg]:h-3.5 [&>svg]:w-3.5 ` +
+        `hover:bg-white/95 hover:border-white ` +
+        `active:bg-white/85 active:border-white ` +
+        `focus-visible:ring-white/40`
+      : `border-white/10 bg-black/30 text-white/85 ` +
+        `hover:bg-black/45 hover:border-white/25 ` +
+        `active:bg-black/55 active:border-white/30 ` +
+        `focus-visible:ring-white/20`;
+  const triggerBase = `${triggerStructure} ${triggerVariant}`;
   const triggerPad = size === "sm" ? "px-3.5" : "px-4";
 
   // (D) Compute the "Generating…" copy fresh on each render. The
@@ -391,12 +632,18 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         hidden={!audioUrl}
         src={audioUrl ?? undefined}
         onLoadedMetadata={(e) => {
+          // Skip metadata events from the silent-prime audio — its
+          // 0.05s duration would briefly clobber the real value.
+          if (!audioUrl) return;
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setDuration(d);
         }}
         onTimeUpdate={(e) => {
+          if (!audioUrl) return; // ignore prime-audio ticks
           const t = e.currentTarget.currentTime;
           setCurrentTime(t);
+          // Source of truth for resume — refs survive teardown events.
+          if (t > 0) sessionPositionRef.current = t;
           // (A) Throttled save — once every POSITION_SAVE_INTERVAL_MS.
           const now = Date.now();
           if (now - lastPositionSaveRef.current >= POSITION_SAVE_INTERVAL_MS) {
@@ -405,9 +652,12 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
           }
         }}
         onPlay={() => {
+          // The silent-audio gesture-priming play() also fires this
+          // event. Gate everything behind the presence of a real URL.
+          if (!audioUrl) return;
           setStatus("playing");
           // (H) Fire 'start' once per audio URL — not every play/pause.
-          if (audioUrl && trackedStartRef.current !== audioUrl) {
+          if (trackedStartRef.current !== audioUrl) {
             trackedStartRef.current = audioUrl;
             try {
               track("audio_listen_start", { slug });
@@ -416,10 +666,29 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
             }
           }
         }}
-        onPause={() => setStatus("paused")}
+        onPause={() => {
+          if (!audioUrl) return;
+          setStatus("paused");
+          // Persist immediately on pause — the next event might be
+          // the user closing the tab or backgrounding the app, in
+          // which case the throttled timeupdate save would miss the
+          // last few seconds. Reset the throttle so the next
+          // timeupdate doesn't double-save the same value.
+          if (audioRef.current) {
+            const t = audioRef.current.currentTime;
+            // Only update the in-memory ref if this is a real position
+            // (>0). A pause event triggered by src removal during
+            // teardown reports currentTime=0 and would otherwise
+            // wipe the value the user actually reached.
+            if (t > 0) sessionPositionRef.current = t;
+            saveAudioPosition(slug, sessionPositionRef.current);
+            lastPositionSaveRef.current = Date.now();
+          }
+        }}
         onEnded={() => {
           setStatus("paused");
           // (A) Listened to the end → don't restore from the tail next time.
+          sessionPositionRef.current = 0;
           clearAudioPosition(slug);
           // (H) Completion event.
           try {
@@ -435,14 +704,42 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         type="button"
         onClick={handlePlay}
         disabled={isWorking}
-        aria-label={isWorking ? "Loading audio narration" : "Play article"}
-        title="Listen to this article"
+        aria-label={
+          isWorking
+            ? "Loading audio narration"
+            : status === "playing"
+              ? "Pause article"
+              : "Play article"
+        }
+        title={status === "playing" ? "Pause" : "Listen to this article"}
         className={[triggerBase, triggerPad, className ?? ""].join(" ")}
       >
-        {isWorking ? <SpinnerIcon /> : <PlayIcon />}
-        <span>
-          {status === "generating" ? `Generating${dots}` : "Listen"}
-        </span>
+        {isWorking ? (
+          <SpinnerIcon />
+        ) : status === "playing" ? (
+          <PauseIcon />
+        ) : (
+          <PlayIcon />
+        )}
+        {status === "generating" ? (
+          // Pin "Generating" in place; the dots get a fixed-width
+          // left-aligned slot so adding/removing one doesn't shift the
+          // rest of the label. Without this, justify-center recentres
+          // the whole label on every animation frame.
+          <span className="inline-flex items-baseline">
+            <span>Generating</span>
+            <span
+              aria-hidden="true"
+              className="ml-px inline-block w-3 text-left tabular-nums"
+            >
+              {dots}
+            </span>
+          </span>
+        ) : status === "playing" ? (
+          <span>Pause</span>
+        ) : (
+          <span>Listen</span>
+        )}
       </button>
 
       {/* Inline error toast (lightweight, lives next to the button) */}
@@ -459,21 +756,59 @@ export function PostAudioPlayer({ slug, title, size = "md", className }: Props) 
         </span>
       ) : null}
 
-      {/* Floating player */}
-      {audioUrl ? (
+      {/* Floating player — only after explicit user intent (status
+          leaves "idle"). Pre-fetched cached audio sets audioUrl
+          silently; we don't reveal the player UI until the user
+          actually taps Listen. */}
+      {audioUrl && status !== "idle" ? (
         minimized ? (
-          <button
-            type="button"
-            onClick={() => setMinimized(false)}
-            aria-label="Expand audio player"
+          // The minimized bubble's primary action is play/pause —
+          // matches the icon shown. Expanding lives on a small caret
+          // in the corner so it's discoverable but doesn't steal the
+          // tap target. Tapping the icon was previously expanding the
+          // player which felt completely wrong: an obvious play/pause
+          // button that doesn't play or pause.
+          <div
             className={[
-              "fixed bottom-3 right-3 z-40 flex h-12 w-12 items-center justify-center",
-              "rounded-full border border-white/15 bg-black/85 text-white backdrop-blur",
-              "pb-player-glow",
+              "fixed bottom-3 right-3 z-40",
+              "pb-player-glow rounded-full",
             ].join(" ")}
           >
-            {status === "playing" ? <PauseIcon /> : <PlayIcon />}
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = audioRef.current;
+                if (!el) return;
+                if (el.paused) el.play().catch(() => undefined);
+                else el.pause();
+              }}
+              aria-label={status === "playing" ? "Pause" : "Play"}
+              title={status === "playing" ? "Pause" : "Play"}
+              className={[
+                "flex h-12 w-12 items-center justify-center",
+                "rounded-full border border-white/15 bg-black/85 text-white backdrop-blur",
+                "transition-transform duration-150",
+                "active:scale-[0.93] hover:bg-black/90",
+                "cursor-pointer",
+              ].join(" ")}
+            >
+              {status === "playing" ? <PauseIcon /> : <PlayIcon />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMinimized(false)}
+              aria-label="Expand audio player"
+              title="Expand"
+              className={[
+                "absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center",
+                "rounded-full border border-white/20 bg-black text-white/85",
+                "transition-transform duration-150 hover:scale-110 active:scale-95",
+                "cursor-pointer",
+              ].join(" ")}
+            >
+              <ExpandIcon />
+            </button>
+          </div>
         ) : (
           <div
             role="region"
@@ -623,6 +958,25 @@ function CloseIcon() {
       strokeLinecap="round"
     >
       <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="9"
+      height="9"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Two arrows pointing outward — universal "expand" affordance */}
+      <path d="M3 7V3h4M13 9v4H9" />
     </svg>
   );
 }

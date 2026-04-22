@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 
@@ -8,6 +8,10 @@ import { getSession } from "@/lib/auth";
 import { createPostSchema, slugify } from "@/lib/validators/posts";
 import { ERROR_CODES } from "@/lib/server/error-codes";
 import { extractExcerpt } from "@/lib/excerpt";
+import {
+  claimAudioGeneration,
+  runAudioGeneration,
+} from "@/lib/server/audioPipeline";
 
 function jsonError(status: number, error: string, message?: string, issues?: unknown) {
   return NextResponse.json({ ok: false as const, error, message, issues }, { status });
@@ -90,6 +94,20 @@ export async function POST(req: Request) {
       if (user.autoPublish) {
         revalidateTag("public-posts", "default");
         revalidateTag(`public-post:${post.slug}`, "default");
+
+        // Pre-warm the audio narration on auto-publish so readers
+        // don't pay the 30-60s TTS wait on first listen. Fire and
+        // forget; never blocks the create response.
+        after(async () => {
+          try {
+            const claim = await claimAudioGeneration(post.slug);
+            if (claim.kind === "claimed") {
+              await runAudioGeneration(claim.postId, claim.input);
+            }
+          } catch (err) {
+            console.error("[posts.create] audio prewarm failed:", err);
+          }
+        });
       }
 
       return NextResponse.json({ ok: true as const, post }, { status: 201 });

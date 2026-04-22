@@ -147,18 +147,30 @@ export default async function PublicPostDetailPage({ params }: Props) {
               {post.title}
             </h1>
 
-            {/* Stats + share sit on their own row beneath the title (desktop). */}
-            <div className="mt-4 hidden items-center gap-2 sm:flex">
-              <PostStatsBar
+            {/* Action stack (desktop). Listen is the headline CTA —
+                full-width inverted on its own row — and Fire / Post /
+                Share share a secondary row underneath. The shared
+                width groups them visually as "reactions to the post"
+                and keeps Listen as the unambiguous primary action. */}
+            <div className="mt-4 hidden flex-col gap-2 sm:flex">
+              <PostAudioPlayer
                 slug={post.slug}
-                initialViewCount={post.viewCount ?? 0}
-                initialFireCount={post.fireCount ?? 0}
-                showViews={false}
+                title={post.title}
                 size="md"
-                stretch={false}
+                variant="primary"
+                className="w-full"
               />
-              <PostShareActions title={post.title} size="md" />
-              <PostAudioPlayer slug={post.slug} title={post.title} size="md" />
+              <div className="flex items-center gap-2">
+                <PostStatsBar
+                  slug={post.slug}
+                  initialViewCount={post.viewCount ?? 0}
+                  initialFireCount={post.fireCount ?? 0}
+                  showViews={false}
+                  size="md"
+                  stretch={false}
+                />
+                <PostShareActions title={post.title} size="md" />
+              </div>
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
@@ -210,18 +222,29 @@ export default async function PublicPostDetailPage({ params }: Props) {
             <div className="mt-4 flex flex-col gap-3">
               <TagChips tags={post.tags ?? []} variant="detail" />
 
+              {/* Mobile mirrors the desktop hierarchy: Listen on top
+                  as the inverted headline CTA, then Fire / Post /
+                  Share together as a 3-up grid below. Same shape on
+                  both breakpoints means one mental model for users. */}
               <div className="flex flex-col gap-2 sm:hidden">
-                <PostStatsBar
+                <PostAudioPlayer
                   slug={post.slug}
-                  initialViewCount={post.viewCount ?? 0}
-                  initialFireCount={post.fireCount ?? 0}
-                  showViews={false}
+                  title={post.title}
                   size="sm"
-                  stretch
+                  variant="primary"
                   className="w-full"
                 />
-                <PostShareActions title={post.title} size="sm" layout="grid" className="w-full" />
-                <PostAudioPlayer slug={post.slug} title={post.title} size="sm" className="w-full justify-center" />
+                <div className="grid w-full grid-cols-3 gap-2">
+                  <PostStatsBar
+                    slug={post.slug}
+                    initialViewCount={post.viewCount ?? 0}
+                    initialFireCount={post.fireCount ?? 0}
+                    showViews={false}
+                    size="sm"
+                    stretch
+                  />
+                  <PostShareActions title={post.title} size="sm" layout="grid" />
+                </div>
               </div>
             </div>
 

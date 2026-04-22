@@ -36,16 +36,27 @@ describe("markdownToNarrationText", () => {
     );
   });
 
-  it("converts headings to spoken sentences with terminal period", () => {
+  it("converts headings into spoken sentences with an ellipsis pause", () => {
     const md = "# Big idea\n\nFollowed by a paragraph.";
-    expect(markdownToNarrationText(md)).toBe("Big idea. Followed by a paragraph.");
+    // Trailing "…" gives the TTS engine a longer beat than a regular
+    // sentence break — the spoken audio should pause noticeably
+    // between the heading and the paragraph that follows.
+    expect(markdownToNarrationText(md)).toBe("Big idea\u2026 Followed by a paragraph.");
   });
 
-  it("collapses heading question marks without doubled punctuation", () => {
+  it("strips heading question marks in favour of the ellipsis pause", () => {
     const md = "## Why does this matter?\n\nBecause it does.";
     expect(markdownToNarrationText(md)).toBe(
-      "Why does this matter? Because it does.",
+      "Why does this matter\u2026 Because it does.",
     );
+  });
+
+  it("does not stack a period after a heading's ellipsis", () => {
+    const md = "### Section\n\nBody text here.";
+    const out = markdownToNarrationText(md);
+    // No "Section…." with a doubled punctuation cue.
+    expect(out).not.toMatch(/\u2026\./);
+    expect(out).toBe("Section\u2026 Body text here.");
   });
 
   it("flattens unordered and ordered lists into prose", () => {
