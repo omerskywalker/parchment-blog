@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Plus, Flame, Eye, PenSquare, ArrowRight } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/server/dashboard";
 import { prisma } from "@/lib/db";
@@ -7,12 +8,30 @@ import {
   getDashboardOnboardingItems,
   getOnboardingProgress,
 } from "@/lib/onboarding";
+import { DashboardInsights } from "./_components/DashboardInsights";
 
-function StatCard({ label, value }: { label: string; value: number | string }) {
+function StatCell({
+  label,
+  value,
+  accent,
+}: {
+  label: React.ReactNode;
+  value: number | string;
+  accent?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
-      <div className="text-sm text-white/60">{label}</div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight text-white">{value}</div>
+    <div className="flex flex-col items-center justify-center bg-black/30 p-4 text-center">
+      <div className="text-3xl font-semibold tracking-tight text-white">
+        {value}
+      </div>
+      <div
+        className={[
+          "mt-1 flex items-center gap-1 text-[10px] uppercase tracking-wider",
+          accent ? "text-white/85 font-medium" : "text-white/55",
+        ].join(" ")}
+      >
+        {label}
+      </div>
     </div>
   );
 }
@@ -68,44 +87,44 @@ export default async function DashboardPage({ searchParams }: Props) {
   const onboardingProgress = getOnboardingProgress(onboardingItems);
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
+    <main className="mx-auto max-w-lg px-4 py-8 sm:py-10">
       {verified ? (
         <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           Your email is verified. Your account is fully unlocked.
         </div>
       ) : null}
 
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white">
+      {/* Header — title + prominent New post, with email demoted to a chip above */}
+      <header className="mb-8">
+        <div className="mb-3">
+          <span className="inline-block rounded border border-white/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/60">
+            {session.user.email}
+          </span>
+        </div>
+        <div className="flex items-end justify-between gap-4">
+          <h1 className="text-3xl font-semibold leading-none tracking-tight text-white">
             {capitalizeEachWord(displayName)}&apos;s Dashboard
           </h1>
-          <p className="mt-2 text-[rgb(var(--muted))]">signed in as {session.user.email}</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
           <Link
             href="/dashboard/posts/new"
-            className="inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+            className="inline-flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3 text-sm font-semibold text-black shadow-md transition-colors hover:bg-white/90"
           >
-            + New post
-          </Link>
-          <Link
-            href="/dashboard/posts"
-            className="inline-flex items-center justify-center rounded-md border border-white/15 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-[rgba(127,127,127,0.12)]"
-          >
-            View my posts
+            <Plus className="h-4 w-4" />
+            <span>New post</span>
           </Link>
         </div>
       </header>
 
       {!onboardingProgress.done ? (
-        <section className="mt-8 rounded-2xl border border-white/10 bg-black/30 p-5">
+        <section className="mb-8 rounded-2xl border border-white/10 bg-black/30 p-5">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Finish setting up your account</h2>
+              <h2 className="text-lg font-semibold text-white">
+                Finish setting up your account
+              </h2>
               <p className="mt-1 text-sm text-white/55">
-                {onboardingProgress.completed} of {onboardingProgress.total} steps complete.
+                {onboardingProgress.completed} of {onboardingProgress.total}{" "}
+                steps complete.
               </p>
             </div>
 
@@ -135,7 +154,9 @@ export default async function DashboardPage({ searchParams }: Props) {
                   >
                     {item.done ? "✓" : "•"}
                   </span>
-                  <span className={item.done ? "text-white/60" : "text-white/90"}>{item.label}</span>
+                  <span className={item.done ? "text-white/60" : "text-white/90"}>
+                    {item.label}
+                  </span>
                 </div>
 
                 {!item.done ? (
@@ -154,61 +175,97 @@ export default async function DashboardPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      {/* Stats */}
-      <section className="mt-8 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Posts" value={summary.postCount} />
-        <StatCard label="Total views" value={summary.views} />
-        <StatCard label="🔥 Reactions" value={summary.fires} />
+      {/* Stats — tight 2x2 grid */}
+      <section className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <StatCell label="Posts" value={summary.postCount} />
+        <StatCell label="Views" value={summary.views} />
+        <StatCell
+          label={
+            <>
+              <Flame className="h-3 w-3" /> Reactions
+            </>
+          }
+          value={summary.fires}
+          accent
+        />
+        <StatCell label="Drafts" value={summary.draftCount} />
       </section>
 
-      {/* Recent activity */}
-      <section className="mt-10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Recent posts</h2>
+      {/* AI insights — collapsed by default */}
+      <div className="mb-10">
+        <DashboardInsights />
+      </div>
+
+      {/* Recent posts */}
+      <section>
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-white">
+            Recent posts
+          </h2>
           <Link
             href="/dashboard/posts"
-            className="text-sm text-white/70 underline underline-offset-4 hover:text-white"
+            className="inline-flex items-center gap-1 text-xs font-medium text-white/70 transition-colors hover:text-white"
           >
-            View all
+            View all <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
 
-        <div className="mt-3 divide-y divide-white/10 rounded-2xl border border-white/10 bg-black/30">
-          {summary.recentPosts.length === 0 ? (
-            <div className="p-6 text-sm text-white/70">No posts yet. Create your first one.</div>
-          ) : (
-            summary.recentPosts.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-4 p-4">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-white">{p.title}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-white/60">
-                    <span>
-                      {p.publishedAt ? "Published" : "Draft"} •{" "}
-                      {new Date(p.updatedAt).toLocaleDateString()}
-                    </span>
-                    <span>👁️ {p.viewCount}</span>
-                    <span>🔥 {p.fireCount}</span>
+        {summary.recentPosts.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-sm text-white/70">
+            No posts yet. Create your first one.
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/10">
+            {summary.recentPosts.map((p) => {
+              const isDraft = !p.publishedAt;
+              const href = isDraft
+                ? `/dashboard/posts/${p.id}/edit`
+                : `/posts/${p.slug}`;
+              return (
+                <li key={p.id} className="group">
+                  <div className="-mx-2 flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-white/5">
+                    <Link
+                      href={href}
+                      className="flex min-w-0 flex-1 flex-col gap-2"
+                    >
+                      <h3 className="truncate text-base font-semibold leading-tight text-white">
+                        {p.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/55">
+                        <span
+                          className={[
+                            "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider",
+                            isDraft
+                              ? "bg-white/10 text-white/70"
+                              : "bg-emerald-500/15 text-emerald-200",
+                          ].join(" ")}
+                        >
+                          {isDraft ? "Draft" : "Published"}
+                        </span>
+                        <span>
+                          {new Date(p.updatedAt).toLocaleDateString()}
+                        </span>
+                        <span className="ml-auto inline-flex items-center gap-1">
+                          <Eye className="h-3 w-3" /> {p.viewCount}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <Flame className="h-3 w-3" /> {p.fireCount}
+                        </span>
+                      </div>
+                    </Link>
+                    <Link
+                      href={`/dashboard/posts/${p.id}/edit`}
+                      aria-label={`Edit ${p.title}`}
+                      className="flex flex-shrink-0 items-center justify-center rounded-md border border-white/15 bg-black/20 p-2 text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                    >
+                      <PenSquare className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                </div>
-
-                <div className="flex shrink-0 gap-2">
-                  <Link
-                    href={`/posts/${p.slug}`}
-                    className="rounded-md border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
-                  >
-                    View
-                  </Link>
-                  <Link
-                    href={`/dashboard/posts/${p.id}/edit`}
-                    className="rounded-md border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
-                  >
-                    Edit
-                  </Link>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </main>
   );
