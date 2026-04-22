@@ -193,6 +193,16 @@
 [data-theme="sepia"] .border-white\/10 {
   border-color: var(--pb-border) !important;
 }
+/* Bare `border-white` is used by the inverted "Listen" CTA. In sepia
+   the button background is repainted to rust (--pb-cta-bg), so the
+   border should match — a tonal rust outline that disappears into
+   the fill, leaving a solid rust pill with cream text. A literal
+   white border on cream would be invisible. */
+[data-theme="sepia"] .border-white,
+[data-theme="sepia"] .hover\:border-white:hover,
+[data-theme="sepia"] .active\:border-white:active {
+  border-color: var(--pb-cta-bg) !important;
+}
 [data-theme="sepia"] .border-white\/15,
 [data-theme="sepia"] .border-white\/20,
 [data-theme="sepia"] .border-white\/25 {
