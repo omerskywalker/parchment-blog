@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import { isOpenAIConfigured } from "@/lib/server/openai";
 import {
@@ -170,7 +172,10 @@ export async function claimAudioGeneration(
       audioKey: null,
       durationSec: null,
       charCount: null,
-      segments: null,
+      // Prisma requires explicit JsonNull (vs DbNull) for nullable
+      // JSONB columns in update payloads — plain `null` would be
+      // a type error.
+      segments: Prisma.JsonNull,
       error: null,
     },
   });
@@ -186,7 +191,7 @@ export async function claimAudioGeneration(
 async function generateChunkWithRetries(
   chunk: NarrationChunk,
   attempts: number = TTS_RETRY_ATTEMPTS,
-): Promise<Uint8Array> {
+): Promise<Buffer> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -212,8 +217,8 @@ async function generateChunkWithRetries(
 async function generateAllChunks(
   chunks: NarrationChunk[],
   concurrency: number = TTS_CONCURRENCY,
-): Promise<Uint8Array[]> {
-  const results: Uint8Array[] = new Array(chunks.length);
+): Promise<Buffer[]> {
+  const results: Buffer[] = new Array(chunks.length);
   let cursor = 0;
   const workers: Promise<void>[] = [];
   for (let w = 0; w < Math.min(concurrency, chunks.length); w++) {
