@@ -164,7 +164,7 @@ export default function NewPostPage() {
             </span>
           </div>
           <Link
-            href="/dashboard/profile"
+            href="/dashboard/profile?next=%2Fdashboard%2Fposts%2Fnew"
             className="inline-flex flex-shrink-0 items-center rounded-full border border-emerald-500/30 px-3 py-1 text-xs font-medium text-emerald-200/90 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-100"
           >
             Change

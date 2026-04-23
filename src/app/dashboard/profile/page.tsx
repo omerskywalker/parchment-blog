@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { s3PublicUrlFromKey } from "@/lib/s3";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   fetchMyProfile,
@@ -15,6 +15,7 @@ import { ProfileSkeleton } from "@/app/components/skeletons/ProfileSkeleton";
 
 export default function ProfilePage() {
   const sp = useSearchParams();
+  const router = useRouter();
   const welcome = sp.get("welcome") === "1";
   const qc = useQueryClient();
 
@@ -52,6 +53,15 @@ export default function ProfilePage() {
       patchMyProfile({ username: username.trim(), bio, avatarKey: avatarKey ?? undefined, autoPublish }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["me-profile"] });
+      // Route the user back where they came from. If a `next` param is
+      // present and points at an internal path, honour it (e.g. opened
+      // from the auto-publish banner on /dashboard/posts/new); otherwise
+      // fall back to the dashboard. Saving used to leave the user
+      // stranded on the profile page with only an inline "Saved." text,
+      // which felt like a dead end.
+      const next = sp.get("next");
+      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+      router.push(target);
     },
   });
 
