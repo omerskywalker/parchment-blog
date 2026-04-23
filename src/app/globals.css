@@ -193,6 +193,23 @@
 [data-theme="sepia"] .border-white\/10 {
   border-color: var(--pb-border) !important;
 }
+/* Listen primary CTA — wrap the inverted white pill with a soft outer
+   ring on the default (dark) theme so the bright surface reads as a
+   framed button against the deep page rather than a floating glare.
+   The frame is a 1px ring of low-opacity white plus a thin 4px halo
+   for atmosphere — subtle enough not to compete with the headline,
+   defined enough to anchor it. Sepia drops the frame entirely because
+   the rust-on-cream variant already reads as a confidently bordered
+   button and a white halo would look broken on the warm surface. */
+.pb-listen-frame {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 0 5px rgba(255, 255, 255, 0.04);
+}
+[data-theme="sepia"] .pb-listen-frame {
+  box-shadow: none;
+}
+
 /* Bare `border-white` is used by the inverted "Listen" CTA. In sepia
    the button background is repainted to rust (--pb-cta-bg), so the
    border should match — a tonal rust outline that disappears into
@@ -222,7 +239,13 @@
    don't catch — so without this, row separators wash out in sepia. */
 [data-theme="sepia"] .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
 [data-theme="sepia"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
-  border-color: var(--pb-border) !important;
+  /* Use the stronger ink border (0.3) instead of the default border (0.18)
+     for divider lines specifically. On cream surfaces the lighter token
+     visually disappears against the recent-posts card background, making
+     the row under the first post look like it had no separator at all in
+     sepia while dark mode rendered it cleanly. The stronger token gives
+     us a divider that reads as intentional structure on both themes. */
+  border-color: var(--pb-border-strong) !important;
 }
 
 /* Dashboard "Logged in as" email value — explicit white-on-dark in default
