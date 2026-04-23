@@ -209,6 +209,25 @@
   border-color: var(--pb-border-strong) !important;
 }
 
+/* `divide-y divide-white/10` is used on the dashboard's recent-posts list.
+   Tailwind compiles `divide-white/10` into a `border-color` rule on
+   `> :not([hidden]) ~ :not([hidden])`, which the white→ink overrides above
+   don't catch — so without this, row separators wash out in sepia. */
+[data-theme="sepia"] .divide-white\/10 > :not([hidden]) ~ :not([hidden]),
+[data-theme="sepia"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--pb-border) !important;
+}
+
+/* Dashboard "Logged in as" email value — explicit white-on-dark in default
+   theme, rust accent in sepia. Sits outside the generic text-white override
+   so the email reads as a personal identifier in both themes. */
+.dashboard-email-value {
+  color: #fff;
+}
+[data-theme="sepia"] .dashboard-email-value {
+  color: var(--pb-accent-strong) !important;
+}
+
 /* ----- Hover affordances ----- */
 [data-theme="sepia"] .hover\:bg-\[rgba\(127\2c 127\2c 127\2c 0\.12\)\]:hover {
   background-color: rgba(43, 34, 24, 0.07) !important;
