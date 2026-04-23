@@ -15,30 +15,28 @@ import { DashboardInsights } from "./_components/DashboardInsights";
 function StatCell({
   label,
   value,
-  accent,
   className,
 }: {
   label: React.ReactNode;
   value: number | string;
-  accent?: boolean;
   className?: string;
 }) {
   return (
     <div
       className={[
-        "flex flex-col items-center justify-center p-4 text-center",
+        "flex flex-col items-center justify-center p-5 text-center",
         className ?? "",
       ].join(" ")}
     >
       <div className="text-3xl font-semibold tracking-tight text-white">
         {value}
       </div>
-      <div
-        className={[
-          "mt-1 flex items-center gap-1 text-[10px] uppercase tracking-wider",
-          accent ? "text-white/85 font-medium" : "text-white/55",
-        ].join(" ")}
-      >
+      {/* Uniform label treatment across all four cells. Previously
+          Reactions opted into a brighter "accent" styling, which made
+          its label visibly heavier than Posts/Views/Listens and read as
+          a bug rather than an intentional emphasis. Now every label
+          uses the same lighter-white tone for a cohesive grid. */}
+      <div className="mt-1.5 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-white/70">
         {label}
       </div>
     </div>
@@ -107,16 +105,16 @@ export default async function DashboardPage({ searchParams }: Props) {
   const onboardingProgress = getOnboardingProgress(onboardingItems);
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-8 sm:py-10">
+    <main className="mx-auto max-w-lg px-4 py-10 sm:py-14">
       {verified ? (
-        <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           Your email is verified. Your account is fully unlocked.
         </div>
       ) : null}
 
-      <header className="mb-8">
+      <header className="mb-10">
         {/* Top row — "Logged in as" block on the left, "+ New post" on the right */}
-        <div className="mb-5 flex items-center justify-between gap-4">
+        <div className="mb-7 flex items-center justify-between gap-4">
           <div className="min-w-0 flex flex-col leading-tight">
             <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">
               Logged in as
@@ -224,7 +222,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       {/* Stats — tight 2x2 grid with explicit per-cell borders so dividers
           are visible in both dark mode and sepia (border-white/10 has a
           sepia override that maps to var(--pb-border)). */}
-      <section className="mb-6 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+      <section className="mb-8 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
         <StatCell
           label={
             <>
@@ -250,7 +248,6 @@ export default async function DashboardPage({ searchParams }: Props) {
             </>
           }
           value={summary.fires}
-          accent
           className="border-r border-white/10"
         />
         <StatCell
@@ -271,7 +268,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       {/* Your drafts — single most-recent draft preview, full list at /dashboard/drafts.
           Hidden when the author has no drafts so the dashboard stays tight. */}
       {summary.latestDraft ? (
-        <section className="mb-10">
+        <section className="mb-12">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-xl font-semibold tracking-tight text-white">
               Your drafts
@@ -348,7 +345,13 @@ export default async function DashboardPage({ searchParams }: Props) {
                 : `/posts/${p.slug}`;
               return (
                 <li key={p.id} className="group">
-                  <div className="flex items-start gap-3 px-3 py-3 transition-colors hover:bg-white/5">
+                  {/* `items-end` parks the edit button on the same baseline as
+                      the metadata row instead of letting it float at the top
+                      of the row, where it read as detached from the post it
+                      edits. The title-link block is its own flex column so
+                      its bottom edge IS the metadata row, so end-alignment
+                      visually pairs the two controls. */}
+                  <div className="flex items-end gap-3 px-4 py-4 transition-colors hover:bg-white/5">
                     <Link
                       href={href}
                       className="flex min-w-0 flex-1 flex-col gap-2"

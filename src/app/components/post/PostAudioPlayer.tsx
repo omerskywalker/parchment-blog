@@ -613,6 +613,11 @@ export function PostAudioPlayer({
         `hover:bg-white/95 hover:border-white ` +
         `active:bg-white/85 active:border-white ` +
         `focus-visible:ring-white/40 ` +
+        // Subtle outer ring + halo on dark mode so the bright pill
+        // reads as a framed button instead of a floating glare. Sepia
+        // strips this in globals.css since the rust variant already
+        // reads as confidently framed on cream.
+        `pb-listen-frame ` +
         // Disabled (loading / generating): keep the surface white and
         // the label fully black so "▶ Listen" / "Generating…" stays
         // legible. Only the border softens slightly to telegraph the
