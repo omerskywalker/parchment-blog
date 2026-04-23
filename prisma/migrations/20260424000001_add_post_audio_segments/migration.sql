@@ -1,0 +1,32 @@
+-- Multi-segment audio narration for long posts.
+--
+-- Until now PostAudio stored exactly one MP3 per post (audioKey,
+-- durationSec, charCount). The OpenAI tts-1 endpoint caps each call
+-- at ~4096 chars, so long posts (>4k chars) were silently truncated
+-- to the first 4k — a 35-min read produced ~4 min of audio.
+--
+-- The new `segments` column stores the ordered chunk metadata as
+-- JSON:
+--   [
+--     { "key": "audio/<postId>/onyx-0.mp3", "durationSec": 240,
+--       "charCount": 3500, "overlapChars": 0 },
+--     { "key": "audio/<postId>/onyx-1.mp3", "durationSec": 235,
+--       "charCount": 3450, "overlapChars": 280 },
+--     ...
+--   ]
+--
+-- `overlapChars` records how many characters at the START of a chunk
+-- duplicate the END of the previous chunk. The chunker emits this
+-- overlap to give the TTS engine prosodic context for the next
+-- chunk's opening sentences (warm-up effect — the voice doesn't sound
+-- abrupt at seams). The player then skips the overlap portion at
+-- playback time so the listener hears each sentence exactly once,
+-- with seam transitions falling at sentence boundaries.
+--
+-- Existing single-file rows keep working unchanged: when `segments`
+-- is NULL the read paths fall back to `audioKey` + `durationSec`.
+-- The cron + force-regen flow rewrites those rows with `segments`
+-- populated over time.
+
+ALTER TABLE "PostAudio"
+  ADD COLUMN "segments" JSONB;

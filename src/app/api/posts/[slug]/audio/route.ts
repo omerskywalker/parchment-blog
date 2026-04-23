@@ -6,6 +6,7 @@ import {
   markdownToNarrationText,
   prepareNarrationInput,
 } from "@/lib/audioText";
+import type { StoredSegment } from "@/lib/server/audioPipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,47 @@ export const dynamic = "force-dynamic";
 const STALE_DELTA_RATIO = 0.02;
 
 type Params = { params: Promise<{ slug: string }> };
+
+/** Wire shape of one segment exposed to clients. The DB stores `key`
+ *  (an S3 object key); we resolve it to a public versioned URL here so
+ *  the client never needs to know about S3 layout. */
+export type WireSegment = {
+  audioUrl: string;
+  durationSec: number;
+  charCount: number;
+  overlapChars: number;
+};
+
+/** Coerce the loosely-typed Prisma JSON column into our segment list,
+ *  defensively dropping malformed entries rather than throwing — a
+ *  bad row would 500 every read otherwise. Returns null when the
+ *  column is null/empty so callers fall back to legacy single-file. */
+export function decodeStoredSegments(value: unknown): StoredSegment[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const out: StoredSegment[] = [];
+  for (const v of value) {
+    if (
+      v &&
+      typeof v === "object" &&
+      typeof (v as StoredSegment).key === "string" &&
+      typeof (v as StoredSegment).durationSec === "number" &&
+      typeof (v as StoredSegment).charCount === "number" &&
+      typeof (v as StoredSegment).overlapChars === "number"
+    ) {
+      out.push(v as StoredSegment);
+    }
+  }
+  return out.length > 0 ? out : null;
+}
+
+export function toWireSegments(stored: StoredSegment[]): WireSegment[] {
+  return stored.map((s) => ({
+    audioUrl: audioPublicUrlVersioned(s.key, s.charCount, s.durationSec),
+    durationSec: s.durationSec,
+    charCount: s.charCount,
+    overlapChars: s.overlapChars,
+  }));
+}
 
 export async function GET(_req: Request, { params }: Params) {
   const { slug } = await params;
@@ -35,6 +77,7 @@ export async function GET(_req: Request, { params }: Params) {
           voice: true,
           durationSec: true,
           charCount: true,
+          segments: true,
           error: true,
         },
       },
@@ -92,6 +135,12 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ ok: false, status: "stale" }, { status: 410 });
   }
 
+  // Prefer the multi-segment payload when present. The legacy
+  // audioUrl/durationSec fields stay populated so older clients that
+  // ignore `segments` keep working — they'll just play chunk 0 only.
+  const stored = decodeStoredSegments(post.audio.segments);
+  const segments = stored ? toWireSegments(stored) : null;
+
   return NextResponse.json({
     ok: true,
     status: "ready" as const,
@@ -102,5 +151,6 @@ export async function GET(_req: Request, { params }: Params) {
     ),
     durationSec: post.audio.durationSec,
     voice: post.audio.voice,
+    segments,
   });
 }

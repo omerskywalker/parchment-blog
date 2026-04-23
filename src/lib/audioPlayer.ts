@@ -127,9 +127,30 @@ function safeLocalStorage(): Storage | null {
 /*  Polling state machine                                                */
 /* -------------------------------------------------------------------- */
 
+/** One playback chunk in a multi-segment narration. The player swaps
+ *  the <audio src> across these in sequence; the listener perceives a
+ *  continuous timeline whose total length equals the sum of each
+ *  segment's effective duration (raw duration minus its overlap, since
+ *  overlap is skipped at playback — see segmentEffectiveDuration). */
+export type Segment = {
+  audioUrl: string;
+  durationSec: number;
+  charCount: number;
+  overlapChars: number;
+};
+
 /** Subset of the GET /api/posts/:slug/audio response shape we care about. */
 export type PollResponse =
-  | { ok: true; status: "ready"; audioUrl: string; durationSec: number }
+  | {
+      ok: true;
+      status: "ready";
+      audioUrl: string;
+      durationSec: number;
+      /** New multi-chunk payload. Older API responses (and posts whose
+       *  audio predates the chunker rollout) omit this field — the
+       *  player falls back to the legacy single-file `audioUrl`. */
+      segments?: Segment[] | null;
+    }
   | { ok: true; status: "pending" }
   | { ok: false; status: "failed"; message?: string }
   | { ok: false; status: string; message?: string };
@@ -192,4 +213,88 @@ export function generatingDots(elapsedMs: number): string {
 export function generatingHint(elapsedMs: number, thresholdMs = 20_000): string | null {
   if (elapsedMs < thresholdMs) return null;
   return "long posts can take ~30s";
+}
+
+/* -------------------------------------------------------------------- */
+/*  Segment math                                                         */
+/* -------------------------------------------------------------------- */
+//
+// The player's UI exposes one continuous timeline whose total length
+// equals the sum of every segment's *effective* duration. Each
+// segment's effective duration is its raw MP3 duration minus the
+// overlap region at its start — that overlap was generated with
+// duplicated source text so the TTS engine had prosodic context for
+// the seam, but the player skips past it on playback so the listener
+// hears every sentence exactly once.
+//
+// All four helpers below are pure so they can be exhaustively tested
+// without spinning up an HTMLAudioElement.
+
+/** How many seconds of `seg` are duplicated overlap (skipped at playback). */
+export function segmentOverlapDuration(seg: Segment): number {
+  if (seg.charCount <= 0 || seg.overlapChars <= 0) return 0;
+  return (seg.overlapChars / seg.charCount) * seg.durationSec;
+}
+
+/** Effective length of a segment as exposed to the user. */
+export function segmentEffectiveDuration(seg: Segment): number {
+  return Math.max(0, seg.durationSec - segmentOverlapDuration(seg));
+}
+
+/** Total UI timeline length across all segments. */
+export function totalEffectiveDuration(segs: Segment[]): number {
+  let acc = 0;
+  for (const s of segs) acc += segmentEffectiveDuration(s);
+  return acc;
+}
+
+/**
+ * Map a UI-timeline position to (which segment to load, where to seek
+ * inside its raw MP3). The returned `offset` already accounts for the
+ * overlap-skip — pass it directly to `audio.currentTime` after
+ * loading the segment's URL.
+ *
+ * Past-the-end values clamp to the very end of the last segment so
+ * scrubbing to the maximum value of the slider doesn't error out.
+ */
+export function locateAbsoluteTime(
+  segs: Segment[],
+  absoluteSec: number,
+): { index: number; offset: number } {
+  if (segs.length === 0) return { index: 0, offset: 0 };
+  let acc = 0;
+  for (let i = 0; i < segs.length; i++) {
+    const eff = segmentEffectiveDuration(segs[i]);
+    if (absoluteSec < acc + eff) {
+      const within = Math.max(0, absoluteSec - acc);
+      return { index: i, offset: segmentOverlapDuration(segs[i]) + within };
+    }
+    acc += eff;
+  }
+  const lastIdx = segs.length - 1;
+  return { index: lastIdx, offset: segs[lastIdx].durationSec };
+}
+
+/**
+ * Inverse of `locateAbsoluteTime`. Given the currently-loaded segment
+ * and the audio element's currentTime, return the position to display
+ * on the UI slider.
+ *
+ * Element times that fall inside the overlap region (which only
+ * happens on a momentary glitch — we always seek past overlap on
+ * load) are treated as the start of the effective region so the slider
+ * doesn't flicker backward.
+ */
+export function elementToAbsoluteTime(
+  segs: Segment[],
+  index: number,
+  elementSec: number,
+): number {
+  if (segs.length === 0 || index < 0 || index >= segs.length) return 0;
+  let acc = 0;
+  for (let i = 0; i < index; i++) acc += segmentEffectiveDuration(segs[i]);
+  const seg = segs[index];
+  const overlap = segmentOverlapDuration(seg);
+  const within = Math.max(0, elementSec - overlap);
+  return acc + within;
 }

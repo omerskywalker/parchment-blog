@@ -13,6 +13,11 @@ import {
   generatingDots,
   generatingHint,
   type PollResponse,
+  type Segment,
+  totalEffectiveDuration,
+  segmentOverlapDuration,
+  locateAbsoluteTime,
+  elementToAbsoluteTime,
 } from "@/lib/audioPlayer";
 
 type AudioStatus =
@@ -31,6 +36,7 @@ type AudioPostResponse =
       audioUrl: string;
       durationSec: number;
       voice: string;
+      segments?: Segment[] | null;
     }
   | { ok: true; status: "pending" }
   | { ok: false; status: string; message?: string };
@@ -104,6 +110,28 @@ export function PostAudioPlayer({
   const [currentTime, setCurrentTime] = React.useState<number>(0);
   const [speed, setSpeed] = React.useState<Speed>(1);
   const [minimized, setMinimized] = React.useState(false);
+  /**
+   * Multi-segment narration state. Long posts (>~3500 chars after
+   * narration cleanup) are TTS-generated as multiple chunks; the
+   * player swaps the <audio src> across them in sequence to deliver
+   * a single continuous timeline.
+   *
+   * - `segments` is null when the API returns the legacy single-file
+   *   payload (or when running against a freshly-cloned post that
+   *   predates the chunker rollout). All multi-segment branches
+   *   short-circuit on this null check, so legacy behavior is
+   *   structurally unchanged.
+   * - `segmentIndex` is the zero-based pointer into `segments`.
+   *   `audioUrl` is *always* the URL of the currently-loaded segment
+   *   (or the single legacy file), so the <audio> element never has
+   *   to know about chunking.
+   * - `currentTime` and `duration` exposed to the UI are ABSOLUTE
+   *   positions on the unified timeline (sum of effective durations
+   *   across all segments). Conversion to/from element-local time
+   *   is centralized in absoluteFromElement / seekToAbsolute below.
+   */
+  const [segments, setSegments] = React.useState<Segment[] | null>(null);
+  const [segmentIndex, setSegmentIndex] = React.useState<number>(0);
   /** When generation started; drives the animated dots + delayed hint. */
   const [genStartedAt, setGenStartedAt] = React.useState<number | null>(null);
   /** Forces a re-render every GENERATING_TICK_MS so dots animate. */
@@ -138,11 +166,46 @@ export function PostAudioPlayer({
   const sessionPositionRef = React.useRef(0);
   /** Whether we've fired the analytics 'start' event for this URL. */
   const trackedStartRef = React.useRef<string | null>(null);
+  /**
+   * Mirror of `segments` / `segmentIndex` for use inside event
+   * handlers spawned from setTimeouts/Promises (where the JSX-bound
+   * closures may carry stale state). Read-only mirrors — always
+   * paired with the corresponding setState below.
+   */
+  const segmentsRef = React.useRef<Segment[] | null>(null);
+  const segmentIndexRef = React.useRef<number>(0);
+  const speedRef = React.useRef<Speed>(1);
+  React.useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
+  React.useEffect(() => {
+    segmentIndexRef.current = segmentIndex;
+  }, [segmentIndex]);
+  React.useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
 
   // Keep playbackRate in sync with state.
   React.useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, audioUrl]);
+
+  /**
+   * Map the audio element's currentTime back to the absolute UI
+   * timeline. With segments active, an element-time of 0 inside
+   * segment N+1 corresponds to (sum of effective durations of
+   * segments 0..N) on the unified slider. Without segments, this is
+   * just the element time itself — keeping all save/scrub paths
+   * unified so legacy single-file mode shares the same code.
+   */
+  function absoluteFromElement(elementSec: number): number {
+    if (!segmentsRef.current) return elementSec;
+    return elementToAbsoluteTime(
+      segmentsRef.current,
+      segmentIndexRef.current,
+      elementSec,
+    );
+  }
 
   // Pre-fetch cached audio metadata on mount. If the narration already
   // exists in storage, populate audioUrl synchronously without playing
@@ -159,8 +222,27 @@ export function PostAudioPlayer({
         const data = (await res.json()) as PollResponse;
         if (cancelled) return;
         if (data.ok && data.status === "ready") {
-          setAudioUrl(data.audioUrl);
-          setDuration(data.durationSec);
+          // Multi-segment payload (long posts): drive playback from
+          // the first segment and report the unified timeline length.
+          // Single-file payload (legacy / short posts): drop straight
+          // through to the single audioUrl + durationSec we got back.
+          if (data.segments && data.segments.length > 0) {
+            const total = totalEffectiveDuration(data.segments);
+            // Resolve any saved position now so the prefetched
+            // <audio> element ends up on the SAME segment the user
+            // will resume into. Without this, a long-form reader
+            // returning from segment 5 would prefetch segment 0 and
+            // pay a network round-trip on tap.
+            const saved = loadAudioPosition(slug, total);
+            const located = locateAbsoluteTime(data.segments, saved);
+            setSegments(data.segments);
+            setSegmentIndex(located.index);
+            setAudioUrl(data.segments[located.index].audioUrl);
+            setDuration(total);
+          } else {
+            setAudioUrl(data.audioUrl);
+            setDuration(data.durationSec);
+          }
           // Status stays "idle" deliberately. We don't render the
           // floating player or pad the body until the user actually
           // taps Listen — pre-fetching is purely to win the iOS
@@ -213,7 +295,10 @@ export function PostAudioPlayer({
       if (!el) return;
       // Don't overwrite a saved position with 0 if the element was
       // reset for any reason — only meaningful positions get saved.
-      saveAudioPosition(slug, el.currentTime);
+      // Convert to absolute UI time so multi-segment posts persist
+      // a value the cross-load restore can correctly relocate.
+      const t = el.currentTime > 0 ? absoluteFromElement(el.currentTime) : 0;
+      saveAudioPosition(slug, t);
     }
     function onVisibility() {
       if (document.visibilityState === "hidden") flush();
@@ -384,11 +469,83 @@ export function PostAudioPlayer({
     }
   }
 
+  /**
+   * Advance the audio element to the next segment in a multi-segment
+   * narration, seeking past the overlap region so the listener
+   * doesn't hear the duplicated context sentences. Autoplay carries
+   * over from the previous segment so playback feels continuous.
+   *
+   * Called from onEnded when the current segment finishes naturally.
+   * No-op on the last segment (caller falls through to the existing
+   * "audio fully complete" flow).
+   */
+  function advanceToNextSegment() {
+    const segs = segmentsRef.current;
+    const idx = segmentIndexRef.current;
+    if (!segs || idx >= segs.length - 1) return false;
+    const nextIdx = idx + 1;
+    const nextSeg = segs[nextIdx];
+    setSegmentIndex(nextIdx);
+    setAudioUrl(nextSeg.audioUrl);
+    // Defer until React commits the new src into the DOM; then seek
+    // past the overlap region and resume playback.
+    requestAnimationFrame(() => {
+      const el = audioRef.current;
+      if (!el) return;
+      el.playbackRate = speedRef.current;
+      const overlap = segmentOverlapDuration(nextSeg);
+      playWithSeek(el, overlap).catch(() => undefined);
+    });
+    return true;
+  }
+
+  /**
+   * Move along the unified timeline by `deltaSec`, swapping segments
+   * if the new position falls in a different chunk. With single-file
+   * audio this collapses to a direct el.currentTime mutation.
+   */
   function skipBy(deltaSec: number) {
     const el = audioRef.current;
     if (!el) return;
     const max = duration || el.duration || 0;
-    el.currentTime = Math.max(0, Math.min(max || el.currentTime + deltaSec, el.currentTime + deltaSec));
+    if (segments) {
+      const absNow = absoluteFromElement(el.currentTime);
+      const absNext = Math.max(0, Math.min(max || absNow + deltaSec, absNow + deltaSec));
+      const { index, offset } = locateAbsoluteTime(segments, absNext);
+      if (index !== segmentIndex) {
+        const wasPlaying = !el.paused;
+        setSegmentIndex(index);
+        setAudioUrl(segments[index].audioUrl);
+        requestAnimationFrame(() => {
+          const el2 = audioRef.current;
+          if (!el2) return;
+          if (wasPlaying) {
+            playWithSeek(el2, offset).catch(() => undefined);
+          } else {
+            const doSeek = () => {
+              try {
+                el2.currentTime = offset;
+              } catch {
+                /* ignore */
+              }
+            };
+            if (el2.readyState >= 1) doSeek();
+            else el2.addEventListener("loadedmetadata", doSeek, { once: true });
+          }
+        });
+      } else {
+        try {
+          el.currentTime = offset;
+        } catch {
+          /* ignore */
+        }
+      }
+      return;
+    }
+    el.currentTime = Math.max(
+      0,
+      Math.min(max || el.currentTime + deltaSec, el.currentTime + deltaSec),
+    );
   }
 
   /**
@@ -465,13 +622,40 @@ export function PostAudioPlayer({
       // are populated — it survived any teardown writes that may have
       // overwritten localStorage with a stale value.
       const stored = Math.max(sessionPositionRef.current, loadAudioPosition(slug, duration));
-      const seekTo = el.currentTime > 0 ? 0 : stored;
       // Reveal the floating player immediately. When the audio was
       // pre-fetched, status is still "idle"; without this the user
       // would tap Listen and see nothing happen until the network
       // round-trip for the MP3 metadata completes.
       if (status === "idle") setStatus("loading");
-      playWithSeek(el, seekTo).catch(() => undefined);
+      // Mid-pause resume: just play(), preserve element position.
+      if (el.currentTime > 0) {
+        playWithSeek(el, 0).catch(() => undefined);
+        return;
+      }
+      // Fresh open: convert the absolute saved position into a
+      // segment + element-local offset. With single-file mode the
+      // conversion is the identity. With segments, the prefetch
+      // effect already loaded the right segment URL into el.src, so
+      // this almost always reduces to a same-segment seek; the
+      // segment-swap branch only runs if the saved value drifted
+      // (e.g. another tab updated localStorage between prefetch and
+      // tap).
+      if (segments) {
+        const { index, offset } = locateAbsoluteTime(segments, stored);
+        if (index !== segmentIndex) {
+          setSegmentIndex(index);
+          setAudioUrl(segments[index].audioUrl);
+          requestAnimationFrame(() => {
+            const el2 = audioRef.current;
+            if (!el2) return;
+            playWithSeek(el2, offset).catch(() => undefined);
+          });
+        } else {
+          playWithSeek(el, offset).catch(() => undefined);
+        }
+      } else {
+        playWithSeek(el, stored).catch(() => undefined);
+      }
       return;
     }
 
@@ -498,8 +682,38 @@ export function PostAudioPlayer({
         setErrorMsg(("message" in data && data.message) || fallback);
         return;
       }
-      setAudioUrl(data.audioUrl);
-      setDuration(data.durationSec);
+      // Hydrate segments + URL + duration from the response. With
+      // segments, audioUrl always points at the segment we're about
+      // to play; duration is the unified-timeline length.
+      const incomingSegments =
+        data.segments && data.segments.length > 0 ? data.segments : null;
+      const totalDuration = incomingSegments
+        ? totalEffectiveDuration(incomingSegments)
+        : data.durationSec;
+      // Resolve restore target on the absolute timeline first, then
+      // figure out which segment + element-offset that translates to.
+      const saved = Math.max(
+        sessionPositionRef.current,
+        loadAudioPosition(slug, totalDuration),
+      );
+      let initialSegmentIndex = 0;
+      let initialElementSeek = saved;
+      if (incomingSegments) {
+        const located = locateAbsoluteTime(incomingSegments, saved);
+        initialSegmentIndex = located.index;
+        initialElementSeek = located.offset;
+      }
+      // Batch state updates so the audio element receives the right
+      // src on first commit and doesn't briefly try to play segment 0
+      // when the saved position was deep into segment 5.
+      setSegments(incomingSegments);
+      setSegmentIndex(initialSegmentIndex);
+      setAudioUrl(
+        incomingSegments
+          ? incomingSegments[initialSegmentIndex].audioUrl
+          : data.audioUrl,
+      );
+      setDuration(totalDuration);
       setStatus("ready");
       setGenStartedAt(null);
       // Autoplay once the src lands on the element. Defer to next tick
@@ -509,17 +723,9 @@ export function PostAudioPlayer({
         const el = audioRef.current;
         if (!el) return;
         el.playbackRate = speed;
-        // (A) Restore previous position if available — playWithSeek
-        // defers the seek until metadata is loaded so it actually
-        // sticks (Safari otherwise resets to 0 on decode start).
-        // Take the higher of the in-memory session ref (current
-        // tab) and localStorage (cross-load) — protects against
-        // any teardown event that wrote a stale value to storage.
-        const saved = Math.max(
-          sessionPositionRef.current,
-          loadAudioPosition(slug, data.durationSec),
-        );
-        playWithSeek(el, saved).catch(() => {
+        // playWithSeek defers the seek until metadata is loaded so
+        // Safari can't snap back to 0 during decode start.
+        playWithSeek(el, initialElementSeek).catch(() => {
           // Safari / activation expired — user can tap the visible
           // play button on the now-glowing player. No error UI.
         });
@@ -542,9 +748,44 @@ export function PostAudioPlayer({
 
   function handleScrub(e: React.ChangeEvent<HTMLInputElement>) {
     if (!audioRef.current) return;
+    const el = audioRef.current;
     const t = Number(e.target.value);
-    audioRef.current.currentTime = t;
     setCurrentTime(t);
+    if (segments) {
+      const { index, offset } = locateAbsoluteTime(segments, t);
+      if (index !== segmentIndex) {
+        // Cross-segment scrub: swap src and seek inside the new
+        // segment once it's loaded.
+        const wasPlaying = !el.paused;
+        setSegmentIndex(index);
+        setAudioUrl(segments[index].audioUrl);
+        requestAnimationFrame(() => {
+          const el2 = audioRef.current;
+          if (!el2) return;
+          if (wasPlaying) {
+            playWithSeek(el2, offset).catch(() => undefined);
+          } else {
+            const doSeek = () => {
+              try {
+                el2.currentTime = offset;
+              } catch {
+                /* ignore */
+              }
+            };
+            if (el2.readyState >= 1) doSeek();
+            else el2.addEventListener("loadedmetadata", doSeek, { once: true });
+          }
+        });
+        return;
+      }
+      try {
+        el.currentTime = offset;
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    el.currentTime = t;
   }
 
   function handleClose() {
@@ -555,7 +796,11 @@ export function PostAudioPlayer({
     // unpredictable points. Take the snapshot first, then write it
     // to both the in-memory ref and localStorage so subsequent
     // reset events can't clobber the saved value.
-    const live = audioRef.current?.currentTime ?? 0;
+    const liveEl = audioRef.current?.currentTime ?? 0;
+    // Convert to absolute (UI) time so multi-segment posts persist
+    // the position across the unified timeline rather than the
+    // last-loaded segment's local clock.
+    const live = liveEl > 0 ? absoluteFromElement(liveEl) : 0;
     if (live > 0) sessionPositionRef.current = live;
     saveAudioPosition(slug, sessionPositionRef.current);
 
@@ -568,6 +813,8 @@ export function PostAudioPlayer({
     setDuration(0);
     setMinimized(false);
     setGenStartedAt(null);
+    setSegments(null);
+    setSegmentIndex(0);
   }
 
   /**
@@ -657,7 +904,12 @@ export function PostAudioPlayer({
         }}
         onTimeUpdate={(e) => {
           if (!audioUrl) return; // ignore prime-audio ticks
-          const t = e.currentTarget.currentTime;
+          const elTime = e.currentTarget.currentTime;
+          // For multi-segment narrations, the UI slider tracks the
+          // unified absolute timeline; for single-file posts this is
+          // just the element time. absoluteFromElement does the
+          // conversion in one place.
+          const t = absoluteFromElement(elTime);
           setCurrentTime(t);
           // Source of truth for resume — refs survive teardown events.
           if (t > 0) sessionPositionRef.current = t;
@@ -700,17 +952,26 @@ export function PostAudioPlayer({
           // last few seconds. Reset the throttle so the next
           // timeupdate doesn't double-save the same value.
           if (audioRef.current) {
-            const t = audioRef.current.currentTime;
+            const elTime = audioRef.current.currentTime;
+            // Convert to absolute UI time so the saved checkpoint
+            // resumes on the unified timeline, not segment-N-local.
+            const t = elTime > 0 ? absoluteFromElement(elTime) : 0;
             // Only update the in-memory ref if this is a real position
             // (>0). A pause event triggered by src removal during
-            // teardown reports currentTime=0 and would otherwise
-            // wipe the value the user actually reached.
+            // teardown — including a segment swap — reports
+            // currentTime=0 and would otherwise wipe the value the
+            // user actually reached.
             if (t > 0) sessionPositionRef.current = t;
             saveAudioPosition(slug, sessionPositionRef.current);
             lastPositionSaveRef.current = Date.now();
           }
         }}
         onEnded={() => {
+          // Multi-segment narration: hop to the next chunk (skipping
+          // its overlap region) instead of treating end-of-segment as
+          // end-of-article. Pause/clear-position only fires after the
+          // FINAL segment finishes naturally.
+          if (advanceToNextSegment()) return;
           setStatus("paused");
           // (A) Listened to the end → don't restore from the tail next time.
           sessionPositionRef.current = 0;

@@ -8,6 +8,10 @@ import {
   claimAudioGeneration,
   runAudioGeneration,
 } from "@/lib/server/audioPipeline";
+import {
+  decodeStoredSegments,
+  toWireSegments,
+} from "../route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,9 +26,37 @@ export const maxDuration = 300;
 
 type Params = { params: Promise<{ slug: string }> };
 
-export async function POST(_req: Request, { params }: Params) {
+/**
+ * Force-regen requests (`?force=1`) bypass the "READY cache hit" and
+ * "PENDING in-flight" short-circuits in claimAudioGeneration. They
+ * burn TTS quota and trigger a fresh generation regardless of state,
+ * so we gate them behind the same Bearer token Vercel uses for cron
+ * (CRON_SECRET). Operators can manually re-trigger from a terminal:
+ *
+ *   curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+ *     "https://parchment.blog/api/posts/<slug>/audio/generate?force=1"
+ *
+ * In dev/CI without CRON_SECRET set we permit force without a header
+ * so test runs and local debugging stay frictionless.
+ */
+function isAuthorizedForForce(req: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return true;
+  return req.headers.get("authorization") === `Bearer ${cronSecret}`;
+}
+
+export async function POST(req: Request, { params }: Params) {
   const { slug } = await params;
-  const claim = await claimAudioGeneration(slug);
+  const url = new URL(req.url);
+  const wantForce = url.searchParams.get("force") === "1";
+  if (wantForce && !isAuthorizedForForce(req)) {
+    return NextResponse.json(
+      { ok: false, status: "unauthorized" as const },
+      { status: 401 },
+    );
+  }
+
+  const claim = await claimAudioGeneration(slug, { force: wantForce });
 
   switch (claim.kind) {
     case "not_configured":
@@ -61,7 +93,13 @@ export async function POST(_req: Request, { params }: Params) {
         where: { slug },
         select: {
           audio: {
-            select: { audioKey: true, durationSec: true, charCount: true, voice: true },
+            select: {
+              audioKey: true,
+              durationSec: true,
+              charCount: true,
+              voice: true,
+              segments: true,
+            },
           },
         },
       });
@@ -73,12 +111,15 @@ export async function POST(_req: Request, { params }: Params) {
           { status: 202 },
         );
       }
+      const stored = decodeStoredSegments(a.segments);
+      const segments = stored ? toWireSegments(stored) : null;
       return NextResponse.json({
         ok: true,
         status: "ready" as const,
         audioUrl: audioPublicUrlVersioned(a.audioKey, a.charCount, a.durationSec),
         durationSec: a.durationSec,
         voice: a.voice ?? DEFAULT_VOICE,
+        segments,
       });
     }
 

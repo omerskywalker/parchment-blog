@@ -79,13 +79,32 @@ export function markdownToNarrationText(md: string): string {
 }
 
 /**
- * Should a post be eligible for audio narration at all?
- *
- * Cap input size to keep TTS cost + latency predictable. tts-1 accepts
- * up to 4096 chars per call; we set a slightly lower threshold so every
- * call is single-shot (no chunking + concatenation in v1).
+ * Hard ceiling on TOTAL narratable characters per post. Posts above
+ * this are truncated — keeps cost predictable for pathological inputs.
+ * 60k chars is roughly a 60-minute read, comfortably above any real
+ * blog post we'd reasonably narrate.
  */
-export const MAX_NARRATION_CHARS = 4000;
+export const MAX_NARRATION_CHARS = 60_000;
+
+/**
+ * Per-chunk target. tts-1 accepts up to 4096 chars; we leave a 500-char
+ * safety margin so an off-by-one near a paragraph break doesn't reject
+ * the call. Below the OpenAI ceiling, smaller chunks generate faster
+ * and yield finer-grained scrub resolution; larger chunks reduce the
+ * number of seams. ~3500 is a comfortable middle.
+ */
+export const TARGET_CHUNK_CHARS = 3500;
+
+/**
+ * How many sentences from the END of chunk N to duplicate at the
+ * START of chunk N+1. The duplication is purely TTS context — the
+ * player skips it on playback so the listener hears each sentence
+ * once. With it, the TTS engine generates chunk N+1's opening with
+ * full prosodic awareness of what just preceded it (warmed-up voice,
+ * matching cadence), eliminating the abrupt "fresh start" feel that
+ * a cold cut would produce at every seam.
+ */
+export const OVERLAP_SENTENCES = 2;
 
 export function isNarratable(text: string): boolean {
   const trimmed = text.trim();
@@ -94,17 +113,132 @@ export function isNarratable(text: string): boolean {
 }
 
 /**
- * Reduce narration text to the exact slice that will be (or was) sent to TTS.
- * Cuts on a word boundary at MAX_NARRATION_CHARS so we never split mid-word.
- *
- * Both the GET cache-check route and the POST generate route call this so
- * `charCount` written at generation time always matches the value compared
- * at read time — without this, long posts (>4000 chars) would always look
- * stale on GET because GET would compare against the FULL text length while
- * POST stored the TRUNCATED length.
+ * Reduce narration text to the slice we actually intend to send to TTS.
+ * Cuts on a word boundary at MAX_NARRATION_CHARS so we never split
+ * mid-word. Both the cache-check route and the generate route call
+ * this so `charCount` written at generation time always matches the
+ * value compared at read time.
  */
 export function prepareNarrationInput(text: string): string {
   if (text.length <= MAX_NARRATION_CHARS) return text;
   const cutAt = text.lastIndexOf(" ", MAX_NARRATION_CHARS);
   return text.slice(0, cutAt > 0 ? cutAt : MAX_NARRATION_CHARS);
+}
+
+/**
+ * Result of splitting a narration into TTS-sized chunks.
+ *
+ *  - `text` is what we send to TTS for this chunk (includes any
+ *    overlap from the previous chunk's tail at its start).
+ *  - `charCount` is `text.length` — duplicated for clarity at
+ *    consumption sites that don't want to recompute.
+ *  - `overlapChars` is how many leading characters of `text` are
+ *    duplicated from the previous chunk. Always 0 for chunk 0.
+ *    The player uses this + the chunk's measured durationSec to
+ *    compute a skip offset so the listener doesn't hear the
+ *    overlap twice.
+ */
+export type NarrationChunk = {
+  text: string;
+  charCount: number;
+  overlapChars: number;
+};
+
+/**
+ * Split a sentence-bearing string into sentence units. Splits on
+ *   - ASCII sentence terminators (. ! ?) followed by whitespace,
+ *   - the heading ellipsis (U+2026) we emit from markdownToNarrationText.
+ * Every emitted unit retains its trailing punctuation + the single
+ * separating space, so re-joining yields the original string.
+ *
+ * Exported for tests; not used by callers other than chunkNarrationText.
+ */
+export function splitSentences(text: string): string[] {
+  if (!text) return [];
+  // Match: any chars (lazy) up to and including a terminator + space,
+  // OR up to and including a terminator at end-of-string.
+  // Terminators: . ! ? \u2026 — optionally followed by closing quotes/brackets.
+  const re = /[\s\S]*?(?:[.!?\u2026]+["'\u201d\u2019)\]]?(?:\s+|$))|[\s\S]+$/g;
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const piece = m[0];
+    if (piece.trim().length > 0) out.push(piece);
+    // Guard against zero-length match infinite loop.
+    if (m.index === re.lastIndex) re.lastIndex += 1;
+  }
+  return out;
+}
+
+/**
+ * Pack a long narration into chunks suitable for TTS, with overlap.
+ *
+ * Algorithm:
+ *   1. Split into sentences.
+ *   2. Greedily fill the current chunk one sentence at a time until
+ *      adding the next sentence would exceed TARGET_CHUNK_CHARS. The
+ *      first sentence always goes in, even if it alone is longer than
+ *      the target — pathological "one giant sentence" posts still get
+ *      narrated, just with a single oversize chunk.
+ *   3. When sealing a chunk, remember its last OVERLAP_SENTENCES so
+ *      the next chunk can be seeded with them as overlap.
+ *
+ * Edge cases:
+ *   - Single short post (≤ TARGET_CHUNK_CHARS) → returns one chunk
+ *     with overlapChars=0.
+ *   - Empty/whitespace-only input → returns [].
+ */
+export function chunkNarrationText(text: string): NarrationChunk[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const sentences = splitSentences(trimmed);
+  if (sentences.length === 0) return [];
+
+  const chunks: NarrationChunk[] = [];
+  let buffer: string[] = [];
+  let bufferLen = 0;
+  let overlapChars = 0;
+
+  const seal = () => {
+    if (buffer.length === 0) return;
+    const t = buffer.join("");
+    chunks.push({
+      text: t,
+      charCount: t.length,
+      overlapChars,
+    });
+    // Seed next chunk with the trailing OVERLAP_SENTENCES of this one
+    // so TTS gets prosodic context. The first chunk has no overlap
+    // (overlapChars=0); every subsequent chunk's overlapChars equals
+    // the length of these prepended sentences.
+    const tail = buffer.slice(-OVERLAP_SENTENCES);
+    const overlapText = tail.join("");
+    overlapChars = overlapText.length;
+    buffer = [...tail];
+    bufferLen = overlapText.length;
+  };
+
+  for (const s of sentences) {
+    // First sentence into a fresh buffer always goes in, even if it's
+    // already larger than the target — better to ship one oversize
+    // chunk than to drop content. After that, seal+restart on overflow.
+    const fresh = bufferLen === overlapChars; // only the carried-over overlap is in buffer
+    if (!fresh && bufferLen + s.length > TARGET_CHUNK_CHARS) {
+      seal();
+    }
+    buffer.push(s);
+    bufferLen += s.length;
+  }
+
+  if (buffer.length > 0) {
+    const t = buffer.join("");
+    chunks.push({
+      text: t,
+      charCount: t.length,
+      overlapChars,
+    });
+  }
+
+  return chunks;
 }

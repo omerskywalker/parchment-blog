@@ -1,9 +1,24 @@
 import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_BUCKET, S3_REGION, s3 } from "./s3";
 
-/** S3 object key for a post's narration audio. Stable per (postId, voice). */
+/** S3 object key for a post's (legacy single-file) narration audio.
+ *  Stable per (postId, voice). New generations use segment keys
+ *  (see audioSegmentObjectKey) but old rows still reference this. */
 export function audioObjectKey(postId: string, voice: string): string {
   return `audio/${postId}/${voice}.mp3`;
+}
+
+/** S3 object key for one chunk of a multi-segment narration. Indexed
+ *  per chunk so each (postId, voice, index) writes to its own object,
+ *  letting the player swap <audio src> across segments cleanly. The
+ *  legacy single-file key (above) is treated as the implicit segment 0
+ *  for back-compat with rows generated before chunking landed. */
+export function audioSegmentObjectKey(
+  postId: string,
+  voice: string,
+  index: number,
+): string {
+  return `audio/${postId}/${voice}-${index}.mp3`;
 }
 
 /** Public HTTPS URL for a stored audio object. */
