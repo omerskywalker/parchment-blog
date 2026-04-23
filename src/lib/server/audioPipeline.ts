@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 import { isOpenAIConfigured } from "@/lib/server/openai";
 import {
@@ -5,10 +7,16 @@ import {
   estimateMp3DurationSec,
   generateNarrationMp3,
 } from "@/lib/server/tts";
-import { audioObjectKey, putAudioObject } from "@/lib/server/audioStorage";
 import {
+  audioObjectKey,
+  audioSegmentObjectKey,
+  putAudioObject,
+} from "@/lib/server/audioStorage";
+import {
+  chunkNarrationText,
   isNarratable,
   markdownToNarrationText,
+  type NarrationChunk,
   prepareNarrationInput,
 } from "@/lib/audioText";
 
@@ -28,11 +36,36 @@ import {
  *
  * Callers decide how to invoke (2): the on-demand route uses
  * `after()` so the response flushes first; the cron does the same.
+ *
+ * As of the multi-chunk rewrite, `runAudioGeneration` always writes
+ * the `segments` JSON column (even for single-chunk posts), and
+ * mirrors the first segment into the legacy `audioKey`/`durationSec`
+ * fields so any unmigrated reader keeps working.
  */
 
 /** When a post's text drifts more than this fraction from the cached
  *  narration's char count, we treat the audio as stale and regenerate. */
 const STALE_DELTA_RATIO = 0.02;
+
+/** How many TTS calls to fire concurrently per generation. tts-1 has
+ *  generous rate limits; 3 keeps wall-clock low without saturating
+ *  Vercel's outbound connections or our function memory. */
+const TTS_CONCURRENCY = 3;
+
+/** Per-chunk retry budget for TTS calls. Transient 5xxs / network
+ *  blips are common at this volume — a quick retry pair recovers
+ *  most of them. We back off a constant 750ms between attempts. */
+const TTS_RETRY_ATTEMPTS = 3;
+const TTS_RETRY_BACKOFF_MS = 750;
+
+/** Persisted shape of the `segments` JSON column. Mirrors
+ *  NarrationChunk plus the bits the player needs at runtime. */
+export type StoredSegment = {
+  key: string;
+  durationSec: number;
+  charCount: number;
+  overlapChars: number;
+};
 
 export type ClaimResult =
   | { kind: "ready" }
@@ -42,6 +75,15 @@ export type ClaimResult =
   | { kind: "not_found" }
   | { kind: "claimed"; postId: string; input: string };
 
+export type ClaimOptions = {
+  /** When true, bypass the "ready + within drift" cache hit and the
+   *  in-flight PENDING short-circuit, always claiming a fresh run.
+   *  Used by force-regen entry points (cron ?force=1, generate
+   *  ?force=1) — both gated by the CRON_SECRET Bearer header so
+   *  random callers can't burn TTS quota. */
+  force?: boolean;
+};
+
 /**
  * Inspect a post and decide whether audio work is needed. Idempotent
  * for callers — multiple cron runs against the same post will each
@@ -50,7 +92,10 @@ export type ClaimResult =
  * Pure side effect: a single Prisma upsert when the result is
  * "claimed". No TTS, no S3, no `after()`.
  */
-export async function claimAudioGeneration(slug: string): Promise<ClaimResult> {
+export async function claimAudioGeneration(
+  slug: string,
+  options: ClaimOptions = {},
+): Promise<ClaimResult> {
   if (!isOpenAIConfigured()) {
     return { kind: "not_configured" };
   }
@@ -84,8 +129,11 @@ export async function claimAudioGeneration(slug: string): Promise<ClaimResult> {
 
   const input = prepareNarrationInput(text);
 
-  // Cache hit — fresh ready audio for the default voice.
+  // Cache hit — fresh ready audio for the default voice. Skipped under
+  // `force` so manual re-triggers always rebuild even when nothing
+  // about the source changed (e.g. testing a chunker tweak).
   if (
+    !options.force &&
     post.audio &&
     post.audio.status === "READY" &&
     post.audio.voice === DEFAULT_VOICE &&
@@ -102,8 +150,10 @@ export async function claimAudioGeneration(slug: string): Promise<ClaimResult> {
     // else fall through to claim — content drifted, regenerate.
   }
 
-  // Already in flight from another caller.
-  if (post.audio?.status === "PENDING") {
+  // Already in flight from another caller. Force callers ignore this
+  // too — operationally, force is the escape hatch for a stuck
+  // PENDING that didn't actually complete (rare crash mid-run).
+  if (!options.force && post.audio?.status === "PENDING") {
     return { kind: "pending" };
   }
 
@@ -122,6 +172,10 @@ export async function claimAudioGeneration(slug: string): Promise<ClaimResult> {
       audioKey: null,
       durationSec: null,
       charCount: null,
+      // Prisma requires explicit JsonNull (vs DbNull) for nullable
+      // JSONB columns in update payloads — plain `null` would be
+      // a type error.
+      segments: Prisma.JsonNull,
       error: null,
     },
   });
@@ -130,27 +184,122 @@ export async function claimAudioGeneration(slug: string): Promise<ClaimResult> {
 }
 
 /**
+ * Generate one chunk's MP3 with bounded retries. Throws after the
+ * final attempt — caller decides whether one chunk's failure should
+ * sink the whole post (yes — partial audio is worse than no audio).
+ */
+async function generateChunkWithRetries(
+  chunk: NarrationChunk,
+  attempts: number = TTS_RETRY_ATTEMPTS,
+): Promise<Buffer> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await generateNarrationMp3(chunk.text, DEFAULT_VOICE);
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, TTS_RETRY_BACKOFF_MS));
+      }
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error("TTS generation failed after retries");
+}
+
+/**
+ * Run the chunk pipeline with bounded concurrency. Index-preserving:
+ * results[i] corresponds to chunks[i] regardless of completion order.
+ * Any chunk failure (after retries) bubbles up so the caller marks
+ * the row FAILED — we don't ship partial audio.
+ */
+async function generateAllChunks(
+  chunks: NarrationChunk[],
+  concurrency: number = TTS_CONCURRENCY,
+): Promise<Buffer[]> {
+  const results: Buffer[] = new Array(chunks.length);
+  let cursor = 0;
+  const workers: Promise<void>[] = [];
+  for (let w = 0; w < Math.min(concurrency, chunks.length); w++) {
+    workers.push(
+      (async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= chunks.length) return;
+          results[i] = await generateChunkWithRetries(chunks[i]);
+        }
+      })(),
+    );
+  }
+  await Promise.all(workers);
+  return results;
+}
+
+/**
  * The slow half: TTS → S3 → mark READY (or FAILED on error).
  * Designed to be called from `after()` so it doesn't block any
  * HTTP response. Never throws — failures are persisted to the row
  * so retries / observability still work.
+ *
+ * Multi-chunk pipeline:
+ *   1. chunkNarrationText splits `input` into sentence-aligned pieces
+ *      under the per-call ceiling, with overlapping context sentences
+ *      between adjacent chunks.
+ *   2. We TTS each chunk in parallel (TTS_CONCURRENCY at a time) with
+ *      per-chunk retries.
+ *   3. Each MP3 is written to its own S3 key (audio/<postId>/<voice>-<i>.mp3).
+ *   4. The `segments` JSON column gets the ordered metadata; legacy
+ *      audioKey/durationSec/charCount mirror chunk 0 + the totals so
+ *      any unmigrated reader still finds something to play.
  */
 export async function runAudioGeneration(
   postId: string,
   input: string,
 ): Promise<void> {
   try {
-    const mp3 = await generateNarrationMp3(input, DEFAULT_VOICE);
-    const key = audioObjectKey(postId, DEFAULT_VOICE);
-    await putAudioObject(key, mp3);
+    const chunks = chunkNarrationText(input);
+    if (chunks.length === 0) {
+      throw new Error("Narration input produced no chunks");
+    }
+
+    const mp3s = await generateAllChunks(chunks);
+
+    // Upload all segments in parallel — these are independent S3 PUTs.
+    const segments: StoredSegment[] = await Promise.all(
+      chunks.map(async (chunk, i) => {
+        const key = audioSegmentObjectKey(postId, DEFAULT_VOICE, i);
+        await putAudioObject(key, mp3s[i]);
+        return {
+          key,
+          durationSec: estimateMp3DurationSec(mp3s[i].byteLength),
+          charCount: chunk.charCount,
+          overlapChars: chunk.overlapChars,
+        };
+      }),
+    );
+
+    // Aggregate totals for the legacy columns. Effective duration
+    // subtracts each chunk's overlap so a single-number "total" matches
+    // what the player will display (overlap is heard once, not twice).
+    const totalDurationSec = segments.reduce((acc, seg) => {
+      const overlapDur = seg.charCount > 0
+        ? Math.round((seg.overlapChars / seg.charCount) * seg.durationSec)
+        : 0;
+      return acc + Math.max(0, seg.durationSec - overlapDur);
+    }, 0);
 
     await prisma.postAudio.update({
       where: { postId },
       data: {
         status: "READY",
-        audioKey: key,
-        durationSec: estimateMp3DurationSec(mp3.byteLength),
+        // Mirror chunk 0 into the legacy audioKey so old clients still
+        // play *something* (the first chunk only). New clients prefer
+        // `segments` and get the full narration.
+        audioKey: segments[0].key,
+        durationSec: totalDurationSec,
         charCount: input.length,
+        segments,
         error: null,
       },
     });
@@ -170,3 +319,7 @@ export async function runAudioGeneration(
     }
   }
 }
+
+/** Re-export so callers stop reaching across modules for the legacy
+ *  helper — useful if we ever swap the back-compat key scheme. */
+export { audioObjectKey };

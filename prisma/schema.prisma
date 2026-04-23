@@ -74,6 +74,14 @@ model PostAudio {
   audioKey    String?
   durationSec Int?
   charCount   Int?
+  /// Ordered list of audio chunks that make up the full narration. Populated
+  /// by the multi-chunk pipeline for posts longer than the OpenAI per-call
+  /// character ceiling — old single-file rows leave this NULL and continue
+  /// to work via the legacy audioKey/durationSec/charCount fields.
+  /// Shape: [{ key: string, durationSec: number, charCount: number,
+  ///           overlapChars: number }]. See migration
+  /// 20260424000001_add_post_audio_segments for the full contract.
+  segments    Json?
   /// Number of distinct playback sessions started for this audio. Pinged once
   /// per audio URL by the client when playback actually begins (not on
   /// generation, not on pause/resume) — see PostAudioPlayer onPlay handler.
