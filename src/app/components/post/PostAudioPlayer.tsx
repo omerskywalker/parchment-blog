@@ -583,13 +583,19 @@ export function PostAudioPlayer({
   // Structural classes only — colors are split out into triggerVariant
   // so the inverted "primary" treatment can swap them without losing
   // the layout, transition, and focus-ring rules.
+  // Note: we deliberately do NOT use a blanket `disabled:opacity-60`
+  // here. On the inverted "primary" variant (white bg + black text), a
+  // 60% global opacity drops the text contrast to ~3:1, which is what
+  // produced the washed-out "▶ Listen" reading in dark mode while the
+  // loading/generating spinner was up. Each variant supplies its own
+  // disabled colors below so the label stays solidly readable.
   const triggerStructure =
     `${triggerHeight} inline-flex items-center justify-center gap-2 ` +
     `rounded-xl border px-4 text-sm font-medium ` +
     `transition-[transform,background-color,border-color,box-shadow,opacity] duration-150 ` +
     `hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.97] ` +
     `focus-visible:outline-none focus-visible:ring-2 ` +
-    `disabled:opacity-60 disabled:hover:translate-y-0 disabled:active:scale-100 ` +
+    `disabled:hover:translate-y-0 disabled:active:scale-100 disabled:cursor-wait ` +
     `cursor-pointer`;
   // Default = dark pill matching Fire/Post/Share. Primary = inverted
   // white-on-black, the only inverted control on the page so it reads
@@ -606,11 +612,17 @@ export function PostAudioPlayer({
         `[&>svg]:h-3.5 [&>svg]:w-3.5 ` +
         `hover:bg-white/95 hover:border-white ` +
         `active:bg-white/85 active:border-white ` +
-        `focus-visible:ring-white/40`
+        `focus-visible:ring-white/40 ` +
+        // Disabled (loading / generating): keep the surface white and
+        // the label fully black so "▶ Listen" / "Generating…" stays
+        // legible. Only the border softens slightly to telegraph the
+        // wait state without sacrificing contrast.
+        `disabled:bg-white disabled:text-black disabled:border-white/70`
       : `border-white/10 bg-black/30 text-white/85 ` +
         `hover:bg-black/45 hover:border-white/25 ` +
         `active:bg-black/55 active:border-white/30 ` +
-        `focus-visible:ring-white/20`;
+        `focus-visible:ring-white/20 ` +
+        `disabled:bg-black/20 disabled:text-white/70 disabled:border-white/10`;
   const triggerBase = `${triggerStructure} ${triggerVariant}`;
   const triggerPad = size === "sm" ? "px-3.5" : "px-4";
 
