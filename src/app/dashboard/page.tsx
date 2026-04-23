@@ -134,8 +134,11 @@ export default async function DashboardPage({ searchParams }: Props) {
           </Link>
         </div>
 
-        {/* Title row — avatar (if any) + dashboard heading */}
-        <div className="flex items-center gap-3">
+        {/* Title row — avatar (if any) + dashboard heading.
+            Centered horizontally so the avatar+title block sits visually
+            balanced over the full-width cards (stats grid, insights panel)
+            below, instead of hugging the left edge. */}
+        <div className="flex items-center justify-center gap-3">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
