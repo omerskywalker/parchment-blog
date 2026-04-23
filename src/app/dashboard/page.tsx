@@ -1,9 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Plus, Flame, Eye, PenSquare, ArrowRight } from "lucide-react";
+import { Plus, Flame, Eye, PenSquare, ArrowRight, Headphones, FileText, BookOpen } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/server/dashboard";
 import { prisma } from "@/lib/db";
+import { s3PublicUrlFromKey } from "@/lib/s3";
 import {
   getDashboardOnboardingItems,
   getOnboardingProgress,
@@ -14,13 +16,20 @@ function StatCell({
   label,
   value,
   accent,
+  className,
 }: {
   label: React.ReactNode;
   value: number | string;
   accent?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center bg-black/30 p-4 text-center">
+    <div
+      className={[
+        "flex flex-col items-center justify-center p-4 text-center",
+        className ?? "",
+      ].join(" ")}
+    >
       <div className="text-3xl font-semibold tracking-tight text-white">
         {value}
       </div>
@@ -41,6 +50,15 @@ function capitalizeEachWord(str: string) {
     .split(" ")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function initialsFromName(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 type Props = {
@@ -76,6 +94,8 @@ export default async function DashboardPage({ searchParams }: Props) {
     user?.username ??
     "Writer";
 
+  const avatarUrl = s3PublicUrlFromKey(user?.avatarKey);
+
   const onboardingItems = getDashboardOnboardingItems({
     isCredentialsUser: Boolean(user?.passwordHash),
     emailVerified: Boolean(user?.emailVerified),
@@ -94,17 +114,17 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       ) : null}
 
-      {/* Header — title + prominent New post, with email demoted to a chip above */}
       <header className="mb-8">
-        <div className="mb-3">
-          <span className="inline-block rounded border border-white/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/60">
-            {session.user.email}
-          </span>
-        </div>
-        <div className="flex items-end justify-between gap-4">
-          <h1 className="text-3xl font-semibold leading-none tracking-tight text-white">
-            {capitalizeEachWord(displayName)}&apos;s Dashboard
-          </h1>
+        {/* Top row — "Logged in as" block on the left, "+ New post" on the right */}
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <div className="min-w-0 flex flex-col leading-tight">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">
+              Logged in as
+            </span>
+            <span className="dashboard-email-value mt-0.5 truncate text-sm font-medium">
+              {session.user.email}
+            </span>
+          </div>
           <Link
             href="/dashboard/posts/new"
             className="inline-flex flex-shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3 text-sm font-semibold text-black shadow-md transition-colors hover:bg-white/90"
@@ -112,6 +132,29 @@ export default async function DashboardPage({ searchParams }: Props) {
             <Plus className="h-4 w-4" />
             <span>New post</span>
           </Link>
+        </div>
+
+        {/* Title row — avatar (if any) + dashboard heading */}
+        <div className="flex items-center gap-3">
+          {avatarUrl ? (
+            <Image
+              src={avatarUrl}
+              alt=""
+              width={44}
+              height={44}
+              className="h-11 w-11 flex-shrink-0 rounded-full border border-white/15 object-cover"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm font-semibold text-white/85"
+            >
+              {initialsFromName(displayName) || "·"}
+            </span>
+          )}
+          <h1 className="min-w-0 truncate text-3xl font-semibold leading-none tracking-tight text-white">
+            {capitalizeEachWord(displayName)}&apos;s Dashboard
+          </h1>
         </div>
       </header>
 
@@ -175,10 +218,28 @@ export default async function DashboardPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      {/* Stats — tight 2x2 grid */}
-      <section className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-        <StatCell label="Posts" value={summary.postCount} />
-        <StatCell label="Views" value={summary.views} />
+      {/* Stats — tight 2x2 grid with explicit per-cell borders so dividers
+          are visible in both dark mode and sepia (border-white/10 has a
+          sepia override that maps to var(--pb-border)). */}
+      <section className="mb-6 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+        <StatCell
+          label={
+            <>
+              <BookOpen className="h-3 w-3" /> Posts
+            </>
+          }
+          value={summary.postCount}
+          className="border-b border-r border-white/10"
+        />
+        <StatCell
+          label={
+            <>
+              <Eye className="h-3 w-3" /> Views
+            </>
+          }
+          value={summary.views}
+          className="border-b border-white/10"
+        />
         <StatCell
           label={
             <>
@@ -187,14 +248,67 @@ export default async function DashboardPage({ searchParams }: Props) {
           }
           value={summary.fires}
           accent
+          className="border-r border-white/10"
         />
-        <StatCell label="Drafts" value={summary.draftCount} />
+        <StatCell
+          label={
+            <>
+              <Headphones className="h-3 w-3" /> Listens
+            </>
+          }
+          value={summary.listens}
+        />
       </section>
 
       {/* AI insights — collapsed by default */}
       <div className="mb-10">
         <DashboardInsights />
       </div>
+
+      {/* Your drafts — single most-recent draft preview, full list at /dashboard/drafts.
+          Hidden when the author has no drafts so the dashboard stays tight. */}
+      {summary.latestDraft ? (
+        <section className="mb-10">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-xl font-semibold tracking-tight text-white">
+              Your drafts
+            </h2>
+            <Link
+              href="/dashboard/drafts"
+              className="inline-flex items-center gap-1 text-xs font-medium text-white/70 transition-colors hover:text-white"
+            >
+              View all{summary.draftCount > 1 ? ` (${summary.draftCount})` : ""}{" "}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <Link
+            href={`/dashboard/posts/${summary.latestDraft.id}/edit`}
+            className="-mx-2 flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-white/5"
+          >
+            <span
+              aria-hidden
+              className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/30 text-white/70"
+            >
+              <FileText className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-base font-semibold leading-tight text-white">
+                {summary.latestDraft.title || "Untitled draft"}
+              </span>
+              <span className="mt-1 block text-xs text-white/55">
+                Last edited{" "}
+                {new Date(summary.latestDraft.updatedAt).toLocaleDateString()}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className="flex flex-shrink-0 items-center justify-center rounded-md border border-white/15 bg-black/20 p-2 text-white/70"
+            >
+              <PenSquare className="h-3.5 w-3.5" />
+            </span>
+          </Link>
+        </section>
+      ) : null}
 
       {/* Recent posts */}
       <section>
