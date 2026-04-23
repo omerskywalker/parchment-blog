@@ -332,7 +332,15 @@ export default async function DashboardPage({ searchParams }: Props) {
             No posts yet. Create your first one.
           </div>
         ) : (
-          <ul className="divide-y divide-white/10">
+          // Wrap the list in a card. The card border supplies the natural
+          // top + bottom edges (so the first row no longer sits flush
+          // against the section header without a separator, which was
+          // most obvious in sepia where the implicit divide-y on the
+          // first child gives no visible top edge), while the internal
+          // divide-y handles the inter-row separators. This reads cleaner
+          // than border-t + border-b on every row, which would double
+          // up between rows.
+          <ul className="divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
             {summary.recentPosts.map((p) => {
               const isDraft = !p.publishedAt;
               const href = isDraft
@@ -340,7 +348,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 : `/posts/${p.slug}`;
               return (
                 <li key={p.id} className="group">
-                  <div className="-mx-2 flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-white/5">
+                  <div className="flex items-start gap-3 px-3 py-3 transition-colors hover:bg-white/5">
                     <Link
                       href={href}
                       className="flex min-w-0 flex-1 flex-col gap-2"

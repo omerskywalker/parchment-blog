@@ -149,21 +149,23 @@ export default function NewPostPage() {
       </div>
 
       {/* Auto-publish banner.
-          Mobile (default): two stacked rows so the descriptor never wraps
-          mid-phrase. Each row is a tight, balanced unit.
-          sm and up: single horizontal row with the change link tucked right.
-          Copy was tightened ("Change in profile" -> "Change") and the
-          descriptor text shortened so widths around 360-414px fit cleanly. */}
+          Single row at every width: status indicator on the left,
+          "Change" as a clickable pill on the right. The descriptive
+          subtext ("your post goes live when you save") was already
+          shown by the page subtitle above, so dropping it from the
+          banner removes the redundancy that forced wrapping at iPhone
+          widths and lets everything sit comfortably on one line. */}
       {autoPublish && (
-        <div className="mt-4 flex flex-col gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-          <div className="flex items-center gap-2 text-sm leading-snug">
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2">
+          <div className="flex min-w-0 items-center gap-2">
             <span aria-hidden className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400" />
-            <span className="font-medium text-emerald-200">Auto-publish on</span>
-            <span className="text-white/45">· goes live on save</span>
+            <span className="truncate text-sm font-medium text-emerald-200">
+              Auto-publish on
+            </span>
           </div>
           <Link
             href="/dashboard/profile"
-            className="self-start text-xs text-white/45 underline-offset-2 hover:text-white/70 hover:underline sm:self-auto"
+            className="inline-flex flex-shrink-0 items-center rounded-full border border-emerald-500/30 px-3 py-1 text-xs font-medium text-emerald-200/90 transition-colors hover:border-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-100"
           >
             Change
           </Link>
