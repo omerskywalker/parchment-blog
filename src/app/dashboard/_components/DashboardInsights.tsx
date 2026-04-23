@@ -115,7 +115,7 @@ export function DashboardInsights() {
                     <h3 className="text-sm font-semibold leading-snug text-white">
                       {s.title}
                     </h3>
-                    <p className="mt-1 text-xs leading-snug text-white/65">
+                    <p className="mt-1 text-xs leading-snug text-white/70">
                       {s.rationale}
                     </p>
                   </div>
