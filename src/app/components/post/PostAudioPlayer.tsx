@@ -664,6 +664,14 @@ export function PostAudioPlayer({
             } catch {
               /* analytics never blocks playback */
             }
+            // Server-side listen counter for the author's dashboard.
+            // Fire-and-forget — we never await or surface errors here so
+            // a flaky network or 5xx never interrupts playback. Same
+            // gating as the analytics event (one bump per audio URL).
+            void fetch(`/api/posts/${encodeURIComponent(slug)}/audio/listen`, {
+              method: "POST",
+              keepalive: true,
+            }).catch(() => undefined);
           }
         }}
         onPause={() => {

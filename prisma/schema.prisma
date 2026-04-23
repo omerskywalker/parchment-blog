@@ -74,6 +74,10 @@ model PostAudio {
   audioKey    String?
   durationSec Int?
   charCount   Int?
+  /// Number of distinct playback sessions started for this audio. Pinged once
+  /// per audio URL by the client when playback actually begins (not on
+  /// generation, not on pause/resume) — see PostAudioPlayer onPlay handler.
+  listenCount Int             @default(0)
   error       String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt

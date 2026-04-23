@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Plus, Flame, Eye, PenSquare, ArrowRight } from "lucide-react";
+import { Plus, Flame, Eye, PenSquare, ArrowRight, Headphones, FileText } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/server/dashboard";
 import { prisma } from "@/lib/db";
@@ -242,13 +242,65 @@ export default async function DashboardPage({ searchParams }: Props) {
           accent
           className="border-r border-white/10"
         />
-        <StatCell label="Drafts" value={summary.draftCount} />
+        <StatCell
+          label={
+            <>
+              <Headphones className="h-3 w-3" /> Listens
+            </>
+          }
+          value={summary.listens}
+        />
       </section>
 
       {/* AI insights — collapsed by default */}
       <div className="mb-10">
         <DashboardInsights />
       </div>
+
+      {/* Your drafts — single most-recent draft preview, full list at /dashboard/drafts.
+          Hidden when the author has no drafts so the dashboard stays tight. */}
+      {summary.latestDraft ? (
+        <section className="mb-10">
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-xl font-semibold tracking-tight text-white">
+              Your drafts
+            </h2>
+            <Link
+              href="/dashboard/drafts"
+              className="inline-flex items-center gap-1 text-xs font-medium text-white/70 transition-colors hover:text-white"
+            >
+              View all{summary.draftCount > 1 ? ` (${summary.draftCount})` : ""}{" "}
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <Link
+            href={`/dashboard/posts/${summary.latestDraft.id}/edit`}
+            className="-mx-2 flex items-start gap-3 rounded-md p-2 transition-colors hover:bg-white/5"
+          >
+            <span
+              aria-hidden
+              className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-white/10 bg-black/30 text-white/70"
+            >
+              <FileText className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-base font-semibold leading-tight text-white">
+                {summary.latestDraft.title || "Untitled draft"}
+              </span>
+              <span className="mt-1 block text-xs text-white/55">
+                Last edited{" "}
+                {new Date(summary.latestDraft.updatedAt).toLocaleDateString()}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className="flex flex-shrink-0 items-center justify-center rounded-md border border-white/15 bg-black/20 p-2 text-white/70"
+            >
+              <PenSquare className="h-3.5 w-3.5" />
+            </span>
+          </Link>
+        </section>
+      ) : null}
 
       {/* Recent posts */}
       <section>
