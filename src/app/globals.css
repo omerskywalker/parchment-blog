@@ -444,14 +444,24 @@ body {
 }
 
 /*
-  Optional: make form elements inherit text color correctly
-  (prevents weird gray inputs on dark backgrounds)
+  Make form elements inherit text color correctly (prevents weird gray
+  inputs on dark backgrounds in some UAs).
+
+  Wrapped in @layer base so Tailwind utility classes like `text-black`
+  on a <button> can still override it. Without a layer, this unlayered
+  rule trumps every layered utility (per CSS cascade layers, unlayered
+  beats layered regardless of specificity), which silently broke the
+  Listen primary button — its `text-black` was being overridden by
+  `color: inherit`, so the label inherited the body's near-white text
+  color in dark mode and rendered as faint grey on a white pill.
 */
-input,
-textarea,
-select,
-button {
-  color: inherit;
+@layer base {
+  input,
+  textarea,
+  select,
+  button {
+    color: inherit;
+  }
 }
 
 /* --- Post stats micro-animations --- */
