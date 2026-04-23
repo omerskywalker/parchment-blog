@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { Plus, Flame, Eye, PenSquare, ArrowRight, Headphones, FileText } from "lucide-react";
+import { Plus, Flame, Eye, PenSquare, ArrowRight, Headphones, FileText, BookOpen } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { getDashboardSummary } from "@/lib/server/dashboard";
 import { prisma } from "@/lib/db";
@@ -223,12 +223,20 @@ export default async function DashboardPage({ searchParams }: Props) {
           sepia override that maps to var(--pb-border)). */}
       <section className="mb-6 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-black/30">
         <StatCell
-          label="Posts"
+          label={
+            <>
+              <BookOpen className="h-3 w-3" /> Posts
+            </>
+          }
           value={summary.postCount}
           className="border-b border-r border-white/10"
         />
         <StatCell
-          label="Views"
+          label={
+            <>
+              <Eye className="h-3 w-3" /> Views
+            </>
+          }
           value={summary.views}
           className="border-b border-white/10"
         />
