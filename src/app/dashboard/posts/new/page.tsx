@@ -148,19 +148,24 @@ export default function NewPostPage() {
         </p>
       </div>
 
-      {/* Auto-publish banner */}
+      {/* Auto-publish banner.
+          Mobile (default): two stacked rows so the descriptor never wraps
+          mid-phrase. Each row is a tight, balanced unit.
+          sm and up: single horizontal row with the change link tucked right.
+          Copy was tightened ("Change in profile" -> "Change") and the
+          descriptor text shortened so widths around 360-414px fit cleanly. */}
       {autoPublish && (
-        <div className="mt-4 flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="text-sm text-emerald-200">Auto-publish ON</span>
-            <span className="text-xs text-white/40">— post goes live on save</span>
+        <div className="mt-4 flex flex-col gap-1 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex items-center gap-2 text-sm leading-snug">
+            <span aria-hidden className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-400" />
+            <span className="font-medium text-emerald-200">Auto-publish on</span>
+            <span className="text-white/45">· goes live on save</span>
           </div>
           <Link
             href="/dashboard/profile"
-            className="text-xs text-white/40 underline-offset-2 hover:text-white/60 hover:underline"
+            className="self-start text-xs text-white/45 underline-offset-2 hover:text-white/70 hover:underline sm:self-auto"
           >
-            Change in profile
+            Change
           </Link>
         </div>
       )}
