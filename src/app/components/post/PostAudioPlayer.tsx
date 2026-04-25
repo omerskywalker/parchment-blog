@@ -899,6 +899,13 @@ export function PostAudioPlayer({
           // Skip metadata events from the silent-prime audio — its
           // 0.05s duration would briefly clobber the real value.
           if (!audioUrl) return;
+          // For multi-segment narrations the UI duration is the
+          // absolute total across ALL chunks (set when segments
+          // arrive). The element's own metadata only knows the
+          // currently-loaded chunk's length, so don't let it
+          // overwrite the total — that's what was causing the
+          // timeline to "reset" to 3-4 min between segments.
+          if (segmentsRef.current) return;
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setDuration(d);
         }}

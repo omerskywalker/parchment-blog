@@ -147,30 +147,32 @@ export default async function PublicPostDetailPage({ params }: Props) {
               {post.title}
             </h1>
 
-            {/* Action stack (desktop). Listen is the headline CTA —
-                full-width inverted on its own row — and Fire / Post /
-                Share share a secondary row underneath. The shared
-                width groups them visually as "reactions to the post"
-                and keeps Listen as the unambiguous primary action. */}
-            <div className="mt-4 hidden flex-col gap-2 sm:flex">
+            {/* Action row (desktop / tablet, sm+). Listen sits inline
+                with Fire / Post / Share rather than stretching across
+                its own row — full-width Listen looked goofy on wide
+                viewports and over-indexed on the headline-action
+                styling. Variant stays "primary" so the white pill
+                still reads as the headline action against the
+                cream/dark surface; it's just sized to its label.
+                flex-wrap covers the narrow-tablet edge case where the
+                row would otherwise overflow. Mobile gets its own
+                full-width treatment further down. */}
+            <div className="mt-4 hidden flex-wrap items-center gap-2 sm:flex">
               <PostAudioPlayer
                 slug={post.slug}
                 title={post.title}
                 size="md"
                 variant="primary"
-                className="w-full"
               />
-              <div className="flex items-center gap-2">
-                <PostStatsBar
-                  slug={post.slug}
-                  initialViewCount={post.viewCount ?? 0}
-                  initialFireCount={post.fireCount ?? 0}
-                  showViews={false}
-                  size="md"
-                  stretch={false}
-                />
-                <PostShareActions title={post.title} size="md" />
-              </div>
+              <PostStatsBar
+                slug={post.slug}
+                initialViewCount={post.viewCount ?? 0}
+                initialFireCount={post.fireCount ?? 0}
+                showViews={false}
+                size="md"
+                stretch={false}
+              />
+              <PostShareActions title={post.title} size="md" />
             </div>
 
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50 sm:text-sm">
