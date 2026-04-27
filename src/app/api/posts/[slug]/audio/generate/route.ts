@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
-import { DEFAULT_VOICE } from "@/lib/server/tts";
+import { DEFAULT_VOICE, isNarrationVoice } from "@/lib/server/tts";
 import {
   audioPublicUrlVersioned,
 } from "@/lib/server/audioStorage";
@@ -56,7 +56,10 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
 
-  const claim = await claimAudioGeneration(slug, { force: wantForce });
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const voice = isNarrationVoice(body.voice) ? body.voice : undefined;
+
+  const claim = await claimAudioGeneration(slug, { force: wantForce, voice });
 
   switch (claim.kind) {
     case "not_configured":
@@ -131,7 +134,7 @@ export async function POST(req: Request, { params }: Params) {
 
     case "claimed":
       after(async () => {
-        await runAudioGeneration(claim.postId, claim.input);
+        await runAudioGeneration(claim.postId, claim.input, claim.voice);
       });
       return NextResponse.json(
         { ok: true, status: "pending" as const },

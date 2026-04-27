@@ -146,6 +146,7 @@ export type PollResponse =
       status: "ready";
       audioUrl: string;
       durationSec: number;
+      voice?: string;
       /** New multi-chunk payload. Older API responses (and posts whose
        *  audio predates the chunker rollout) omit this field — the
        *  player falls back to the legacy single-file `audioUrl`. */
@@ -298,3 +299,18 @@ export function elementToAbsoluteTime(
   const within = Math.max(0, elementSec - overlap);
   return acc + within;
 }
+
+/* -------------------------------------------------------------------- */
+/*  Voice options                                                        */
+/* -------------------------------------------------------------------- */
+
+export const VOICE_OPTIONS = [
+  { id: "alloy", label: "Alloy" },
+  { id: "echo", label: "Echo" },
+  { id: "fable", label: "Fable" },
+  { id: "nova", label: "Nova" },
+  { id: "onyx", label: "Onyx" },
+  { id: "shimmer", label: "Shimmer" },
+] as const;
+
+export const DEFAULT_VOICE_ID = "onyx";
