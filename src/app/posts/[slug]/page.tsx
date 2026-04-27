@@ -147,29 +147,25 @@ export default async function PublicPostDetailPage({ params }: Props) {
               {post.title}
             </h1>
 
-            {/* Action stack (desktop). Listen is the headline CTA —
-                full-width inverted on its own row — and Fire / Post /
-                Share share a secondary row underneath. The shared
-                width groups them visually as "reactions to the post"
-                and keeps Listen as the unambiguous primary action. */}
-            <div className="mt-4 hidden flex-col gap-2 sm:flex">
-              <PostAudioPlayer
+            {/* Action row (desktop). Fire / Post / Share on the left,
+                Listen on the right as the primary CTA. */}
+            <div className="mt-4 hidden items-center gap-2 sm:flex">
+              <PostStatsBar
                 slug={post.slug}
-                title={post.title}
+                initialViewCount={post.viewCount ?? 0}
+                initialFireCount={post.fireCount ?? 0}
+                showViews={false}
                 size="md"
-                variant="primary"
-                className="w-full"
+                stretch={false}
               />
-              <div className="flex items-center gap-2">
-                <PostStatsBar
+              <PostShareActions title={post.title} size="md" />
+              <div className="ml-auto">
+                <PostAudioPlayer
                   slug={post.slug}
-                  initialViewCount={post.viewCount ?? 0}
-                  initialFireCount={post.fireCount ?? 0}
-                  showViews={false}
+                  title={post.title}
                   size="md"
-                  stretch={false}
+                  variant="primary"
                 />
-                <PostShareActions title={post.title} size="md" />
               </div>
             </div>
 
