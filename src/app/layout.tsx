@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Providers from "./providers";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
+import { SWRegistration } from "@/app/components/SWRegistration";
 import { getThemeBootScript } from "@/lib/theme";
 
 const geistSans = Geist({
@@ -85,6 +86,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
          * single source of truth.
          */}
         <script dangerouslySetInnerHTML={{ __html: getThemeBootScript() }} />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#000000" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${pbDisplay.variable} ${pbText.variable} flex min-h-screen flex-col`}
@@ -94,6 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex-1">{children}</div>
           <Footer />
         </Providers>
+        <SWRegistration />
         <Analytics />
         <SpeedInsights />
       </body>

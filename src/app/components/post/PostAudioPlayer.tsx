@@ -19,6 +19,7 @@ import {
   locateAbsoluteTime,
   elementToAbsoluteTime,
 } from "@/lib/audioPlayer";
+import { isAudioCached, cacheAudioUrls } from "@/lib/audioCache";
 
 type AudioStatus =
   | "idle"
@@ -136,6 +137,8 @@ export function PostAudioPlayer({
   const [genStartedAt, setGenStartedAt] = React.useState<number | null>(null);
   /** Forces a re-render every GENERATING_TICK_MS so dots animate. */
   const [genTick, setGenTick] = React.useState(0);
+  const [cacheStatus, setCacheStatus] = React.useState<"idle" | "downloading" | "cached" | "error">("idle");
+  const [cacheProgress, setCacheProgress] = React.useState<{ done: number; total: number } | null>(null);
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   /**
@@ -355,6 +358,32 @@ export function PostAudioPlayer({
   }, [audioUrl, status]);
 
   const isWorking = status === "loading" || status === "generating";
+
+  function getAllAudioUrls(): string[] {
+    if (segments && segments.length > 0) {
+      return segments.map((s) => s.audioUrl);
+    }
+    return audioUrl ? [audioUrl] : [];
+  }
+
+  // Check cache status when audio becomes available.
+  React.useEffect(() => {
+    if (!audioUrl || status === "idle") return;
+    const urls = segments ? segments.map((s) => s.audioUrl) : [audioUrl];
+    isAudioCached(urls).then((cached) => {
+      if (cached) setCacheStatus("cached");
+    });
+  }, [audioUrl, segments, status]);
+
+  async function handleSaveOffline() {
+    const urls = getAllAudioUrls();
+    if (urls.length === 0) return;
+    setCacheStatus("downloading");
+    setCacheProgress({ done: 0, total: urls.length });
+    const ok = await cacheAudioUrls(urls, (p) => setCacheProgress(p));
+    setCacheStatus(ok ? "cached" : "error");
+    setCacheProgress(null);
+  }
 
   /**
    * Poll GET /audio until status flips out of `pending`. Captures the
@@ -1181,6 +1210,45 @@ export function PostAudioPlayer({
                 {speed}×
               </button>
 
+              <button
+                type="button"
+                onClick={handleSaveOffline}
+                disabled={cacheStatus === "downloading" || cacheStatus === "cached"}
+                className={[
+                  "flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[10px] transition-colors",
+                  cacheStatus === "cached"
+                    ? "border-green-500/30 text-green-400/80"
+                    : cacheStatus === "downloading"
+                      ? "border-white/15 text-white/50 cursor-wait"
+                      : "border-white/15 text-white/75 hover:bg-white/10 cursor-pointer",
+                ].join(" ")}
+                aria-label={cacheStatus === "cached" ? "Audio saved offline" : "Save audio for offline listening"}
+                title={
+                  cacheStatus === "cached"
+                    ? "Saved offline"
+                    : cacheStatus === "downloading"
+                      ? `Downloading${cacheProgress ? ` ${cacheProgress.done}/${cacheProgress.total}` : "..."}`
+                      : "Save offline"
+                }
+              >
+                {cacheStatus === "cached" ? (
+                  <CheckIcon />
+                ) : cacheStatus === "downloading" ? (
+                  <SpinnerIcon />
+                ) : (
+                  <DownloadIcon />
+                )}
+                <span className="hidden sm:inline">
+                  {cacheStatus === "cached"
+                    ? "Saved"
+                    : cacheStatus === "downloading"
+                      ? cacheProgress
+                        ? `${cacheProgress.done}/${cacheProgress.total}`
+                        : "..."
+                      : "Offline"}
+                </span>
+              </button>
+
               {/* (F) Minimize collapses the player to a draggable-looking
                   bubble so power-listeners can hide it without losing
                   position or playback. */}
@@ -1280,6 +1348,42 @@ function MinimizeIcon() {
       strokeLinecap="round"
     >
       <path d="M3 12h10" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 2v8M5 7l3 3 3-3M3 12h10" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 8.5l3.5 3.5 6.5-8" />
     </svg>
   );
 }

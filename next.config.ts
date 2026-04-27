@@ -62,7 +62,8 @@ const securityHeaders = [
       // is 'self', which excludes S3).
       "media-src 'self' https://*.amazonaws.com",
       "font-src 'self'",
-      "connect-src 'self' https://*.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+      "connect-src 'self' https://*.sentry.io https://va.vercel-scripts.com https://vitals.vercel-insights.com https://*.amazonaws.com",
+      "worker-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
