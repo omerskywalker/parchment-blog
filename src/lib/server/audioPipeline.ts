@@ -6,6 +6,7 @@ import {
   DEFAULT_VOICE,
   estimateMp3DurationSec,
   generateNarrationMp3,
+  type NarrationVoice,
 } from "@/lib/server/tts";
 import {
   audioObjectKey,
@@ -73,7 +74,7 @@ export type ClaimResult =
   | { kind: "ineligible" }
   | { kind: "not_configured" }
   | { kind: "not_found" }
-  | { kind: "claimed"; postId: string; input: string };
+  | { kind: "claimed"; postId: string; input: string; voice: NarrationVoice };
 
 export type ClaimOptions = {
   /** When true, bypass the "ready + within drift" cache hit and the
@@ -82,6 +83,7 @@ export type ClaimOptions = {
    *  ?force=1) — both gated by the CRON_SECRET Bearer header so
    *  random callers can't burn TTS quota. */
   force?: boolean;
+  voice?: NarrationVoice;
 };
 
 /**
@@ -128,15 +130,16 @@ export async function claimAudioGeneration(
   }
 
   const input = prepareNarrationInput(text);
+  const voice = options.voice ?? DEFAULT_VOICE;
 
-  // Cache hit — fresh ready audio for the default voice. Skipped under
-  // `force` so manual re-triggers always rebuild even when nothing
-  // about the source changed (e.g. testing a chunker tweak).
+  // Cache hit — fresh ready audio for the requested voice. Skipped
+  // under `force` so manual re-triggers always rebuild even when
+  // nothing about the source changed (e.g. testing a chunker tweak).
   if (
     !options.force &&
     post.audio &&
     post.audio.status === "READY" &&
-    post.audio.voice === DEFAULT_VOICE &&
+    post.audio.voice === voice &&
     post.audio.audioKey &&
     post.audio.charCount != null &&
     post.audio.durationSec != null
@@ -163,11 +166,11 @@ export async function claimAudioGeneration(
     where: { postId: post.id },
     create: {
       postId: post.id,
-      voice: DEFAULT_VOICE,
+      voice,
       status: "PENDING",
     },
     update: {
-      voice: DEFAULT_VOICE,
+      voice,
       status: "PENDING",
       audioKey: null,
       durationSec: null,
@@ -180,7 +183,7 @@ export async function claimAudioGeneration(
     },
   });
 
-  return { kind: "claimed", postId: post.id, input };
+  return { kind: "claimed", postId: post.id, input, voice };
 }
 
 /**
@@ -190,12 +193,13 @@ export async function claimAudioGeneration(
  */
 async function generateChunkWithRetries(
   chunk: NarrationChunk,
+  voice: NarrationVoice,
   attempts: number = TTS_RETRY_ATTEMPTS,
 ): Promise<Buffer> {
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
-      return await generateNarrationMp3(chunk.text, DEFAULT_VOICE);
+      return await generateNarrationMp3(chunk.text, voice);
     } catch (err) {
       lastErr = err;
       if (i < attempts - 1) {
@@ -216,6 +220,7 @@ async function generateChunkWithRetries(
  */
 async function generateAllChunks(
   chunks: NarrationChunk[],
+  voice: NarrationVoice,
   concurrency: number = TTS_CONCURRENCY,
 ): Promise<Buffer[]> {
   const results: Buffer[] = new Array(chunks.length);
@@ -227,7 +232,7 @@ async function generateAllChunks(
         while (true) {
           const i = cursor++;
           if (i >= chunks.length) return;
-          results[i] = await generateChunkWithRetries(chunks[i]);
+          results[i] = await generateChunkWithRetries(chunks[i], voice);
         }
       })(),
     );
@@ -256,6 +261,7 @@ async function generateAllChunks(
 export async function runAudioGeneration(
   postId: string,
   input: string,
+  voice: NarrationVoice = DEFAULT_VOICE,
 ): Promise<void> {
   try {
     const chunks = chunkNarrationText(input);
@@ -263,12 +269,12 @@ export async function runAudioGeneration(
       throw new Error("Narration input produced no chunks");
     }
 
-    const mp3s = await generateAllChunks(chunks);
+    const mp3s = await generateAllChunks(chunks, voice);
 
     // Upload all segments in parallel — these are independent S3 PUTs.
     const segments: StoredSegment[] = await Promise.all(
       chunks.map(async (chunk, i) => {
-        const key = audioSegmentObjectKey(postId, DEFAULT_VOICE, i);
+        const key = audioSegmentObjectKey(postId, voice, i);
         await putAudioObject(key, mp3s[i]);
         return {
           key,

@@ -1,15 +1,14 @@
 import { openai } from "./openai";
 
-export type NarrationVoice =
-  | "alloy"
-  | "echo"
-  | "fable"
-  | "onyx"
-  | "nova"
-  | "shimmer";
+export const NARRATION_VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
+export type NarrationVoice = (typeof NARRATION_VOICES)[number];
 
 /** Brand voice for Parchment narrations. */
 export const DEFAULT_VOICE: NarrationVoice = "onyx";
+
+export function isNarrationVoice(v: unknown): v is NarrationVoice {
+  return typeof v === "string" && (NARRATION_VOICES as readonly string[]).includes(v);
+}
 
 /**
  * Generate an MP3 narration of the given plain-text body.
