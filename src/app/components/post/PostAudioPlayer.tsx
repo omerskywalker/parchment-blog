@@ -1028,10 +1028,19 @@ export function PostAudioPlayer({
         )}
       </button>
 
-      {/* Inline error toast (lightweight, lives next to the button) */}
+      {/* Inline error toast + retry affordance */}
       {status === "error" && errorMsg ? (
-        <span className="ml-2 text-xs text-red-300/90" role="status">
-          {errorMsg}
+        <span className="ml-2 inline-flex items-center gap-2 text-xs text-red-300/90" role="status">
+          <span>{errorMsg}</span>
+          <button
+            type="button"
+            onClick={handlePlay}
+            aria-label="Retry audio narration"
+            className="inline-flex items-center gap-1 rounded-md border border-red-300/25 px-2 py-0.5 text-red-300/90 transition-colors hover:bg-red-300/10 hover:text-red-200 cursor-pointer"
+          >
+            <RetryIcon />
+            Retry
+          </button>
         </span>
       ) : null}
 
@@ -1280,6 +1289,27 @@ function MinimizeIcon() {
       strokeLinecap="round"
     >
       <path d="M3 12h10" />
+    </svg>
+  );
+}
+
+function RetryIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2.5 8a5.5 5.5 0 0 1 9.3-4" />
+      <path d="M13.5 8a5.5 5.5 0 0 1-9.3 4" />
+      <polyline points="8 2 12 4" />
+      <polyline points="8 14 4 12" />
     </svg>
   );
 }
