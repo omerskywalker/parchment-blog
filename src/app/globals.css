@@ -375,6 +375,24 @@
   background-color: rgba(43, 34, 24, 0.04) !important;
 }
 
+/* ============================================================
+   DARK THEME (default) — explicit body background.
+   ------------------------------------------------------------
+   Without this, the dark theme had no body background-color set
+   anywhere: it relied on (prefers-color-scheme: dark) flipping
+   :root --background. Visitors on Safari/macOS with a LIGHT system
+   appearance therefore got a near-white body underneath the
+   translucent bg-black/40 cards — which read as a broken grey UI.
+   We now stamp the dark surface explicitly whenever data-theme is
+   anything other than "sepia" (and on the unset bootstrap state),
+   so the page is correct regardless of system preference.
+   ============================================================ */
+html:not([data-theme="sepia"]),
+html:not([data-theme="sepia"]) body {
+  background-color: #0a0a0a;
+  color: #ededed;
+}
+
 /* Smooth crossfade between themes — feels like ink developing on the page */
 html {
   transition:
