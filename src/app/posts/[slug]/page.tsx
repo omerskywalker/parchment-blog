@@ -126,7 +126,7 @@ export default async function PublicPostDetailPage({ params }: Props) {
 
       <ReadingProgressBar />
 
-      <main className="mx-auto max-w-[845px] px-4 py-10 xl:max-w-[1180px] 2xl:max-w-[1320px]">
+      <main className="mx-auto max-w-[845px] px-4 py-10 xl:max-w-[min(80vw,1400px)]">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/posts"

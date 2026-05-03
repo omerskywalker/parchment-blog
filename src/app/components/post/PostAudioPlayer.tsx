@@ -18,8 +18,6 @@ import {
   segmentOverlapDuration,
   locateAbsoluteTime,
   elementToAbsoluteTime,
-  VOICE_OPTIONS,
-  DEFAULT_VOICE_ID,
 } from "@/lib/audioPlayer";
 import { isAudioCached, cacheAudioUrls } from "@/lib/audioCache";
 
@@ -113,8 +111,6 @@ export function PostAudioPlayer({
   const [currentTime, setCurrentTime] = React.useState<number>(0);
   const [speed, setSpeed] = React.useState<Speed>(1);
   const [minimized, setMinimized] = React.useState(false);
-  const [voice, setVoice] = React.useState(DEFAULT_VOICE_ID);
-  const [voiceMenuOpen, setVoiceMenuOpen] = React.useState(false);
   /**
    * Multi-segment narration state. Long posts (>~3500 chars after
    * narration cleanup) are TTS-generated as multiple chunks; the
@@ -197,18 +193,6 @@ export function PostAudioPlayer({
     if (audioRef.current) audioRef.current.playbackRate = speed;
   }, [speed, audioUrl]);
 
-  // Close voice menu on outside click.
-  React.useEffect(() => {
-    if (!voiceMenuOpen) return;
-    function onPointerDown(e: PointerEvent) {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-voice-menu]")) return;
-      setVoiceMenuOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [voiceMenuOpen]);
-
   /**
    * Map the audio element's currentTime back to the absolute UI
    * timeline. With segments active, an element-time of 0 inside
@@ -241,7 +225,6 @@ export function PostAudioPlayer({
         const data = (await res.json()) as PollResponse;
         if (cancelled) return;
         if (data.ok && data.status === "ready") {
-          if (data.voice) setVoice(data.voice);
           // Multi-segment payload (long posts): drive playback from
           // the first segment and report the unified timeline length.
           // Single-file payload (legacy / short posts): drop straight
@@ -435,18 +418,12 @@ export function PostAudioPlayer({
     }
   }
 
-  async function fetchOrGenerate(generation: number, requestedVoice?: string): Promise<PollResponse> {
+  async function fetchOrGenerate(generation: number): Promise<PollResponse> {
     // Try cache first.
     const getRes = await fetch(`/api/posts/${slug}/audio`, { cache: "no-store" });
     const getData = (await getRes.json()) as PollResponse;
 
-    // Cache hit — but only if the stored voice matches what the user wants.
-    if (getRes.ok && getData.ok && getData.status === "ready") {
-      if (!requestedVoice || getData.voice === requestedVoice) {
-        return getData;
-      }
-      // Voice mismatch — fall through to regenerate.
-    }
+    if (getRes.ok && getData.ok && getData.status === "ready") return getData;
 
     if (getRes.ok && getData.ok && getData.status === "pending") {
       // A worker is already running (kicked off by another client). Poll.
@@ -455,13 +432,12 @@ export function PostAudioPlayer({
       return pollUntilReady(generation);
     }
 
-    // 404 missing / 410 stale / failed / voice mismatch → claim a fresh generation.
+    // 404 missing / 410 stale / failed → claim a fresh generation.
     setStatus("generating");
     setGenStartedAt(Date.now());
     const postRes = await fetch(`/api/posts/${slug}/audio/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voice: requestedVoice }),
       cache: "no-store",
     });
     const postData = (await postRes.json()) as AudioPostResponse;
@@ -721,7 +697,7 @@ export function PostAudioPlayer({
     setStatus("loading");
     setErrorMsg(null);
     try {
-      const data = await fetchOrGenerate(generation, voice);
+      const data = await fetchOrGenerate(generation);
       if (generationRef.current !== generation) return;
       if (!data.ok || data.status !== "ready") {
         setStatus("error");
@@ -869,64 +845,6 @@ export function PostAudioPlayer({
     setSegmentIndex(0);
   }
 
-  async function handleVoiceSwitch(newVoice: string) {
-    if (newVoice === voice) {
-      setVoiceMenuOpen(false);
-      return;
-    }
-    setVoice(newVoice);
-    setVoiceMenuOpen(false);
-
-    audioRef.current?.pause();
-    sessionPositionRef.current = 0;
-    clearAudioPosition(slug);
-    setAudioUrl(null);
-    setSegments(null);
-    setSegmentIndex(0);
-    setCurrentTime(0);
-    setDuration(0);
-
-    primeGesture();
-    const generation = ++generationRef.current;
-    setStatus("loading");
-    setErrorMsg(null);
-    try {
-      const data = await fetchOrGenerate(generation, newVoice);
-      if (generationRef.current !== generation) return;
-      if (!data.ok || data.status !== "ready") {
-        setStatus("error");
-        setErrorMsg("Couldn't generate audio for this voice.");
-        return;
-      }
-      const incomingSegments =
-        data.segments && data.segments.length > 0 ? data.segments : null;
-      const totalDuration = incomingSegments
-        ? totalEffectiveDuration(incomingSegments)
-        : data.durationSec;
-      setSegments(incomingSegments);
-      setSegmentIndex(0);
-      setAudioUrl(incomingSegments ? incomingSegments[0].audioUrl : data.audioUrl);
-      setDuration(totalDuration);
-      setStatus("ready");
-      setGenStartedAt(null);
-      requestAnimationFrame(() => {
-        if (generationRef.current !== generation) return;
-        const el = audioRef.current;
-        if (!el) return;
-        el.playbackRate = speed;
-        playWithSeek(el, 0).catch(() => undefined);
-      });
-    } catch (err) {
-      if (generationRef.current !== generation) return;
-      setStatus("error");
-      setErrorMsg(
-        err instanceof Error && err.message !== "cancelled"
-          ? err.message
-          : "Network error. Try again.",
-      );
-    }
-  }
-
   /**
    * Trigger button styling — matches the Fire/Copy/Post/Share buttons
    * in PostStatsBar + PostShareActions so the action row reads as one
@@ -1009,6 +927,13 @@ export function PostAudioPlayer({
           // Skip metadata events from the silent-prime audio — its
           // 0.05s duration would briefly clobber the real value.
           if (!audioUrl) return;
+          // Multi-segment: `duration` is the unified-timeline total
+          // computed from all segments and set in the fetch flow.
+          // Each per-segment metadata event would otherwise clobber
+          // it back down to a single chunk's ~3-4 minute length,
+          // which is what made long posts appear to "stop early"
+          // and never reveal their full runtime.
+          if (segmentsRef.current) return;
           const d = e.currentTarget.duration;
           if (Number.isFinite(d) && d > 0) setDuration(d);
         }}
@@ -1338,41 +1263,6 @@ export function PostAudioPlayer({
                       : "Offline"}
                 </span>
               </button>
-
-              <div className="relative" data-voice-menu>
-                <button
-                  type="button"
-                  onClick={() => setVoiceMenuOpen((o) => !o)}
-                  disabled={isWorking}
-                  className="h-7 shrink-0 rounded-md border border-white/15 px-2 text-[10px] capitalize text-white/75 hover:bg-white/10 disabled:opacity-50 disabled:cursor-wait cursor-pointer"
-                  aria-label={`Voice: ${voice}`}
-                  title="Change voice"
-                >
-                  {voice}
-                </button>
-                {voiceMenuOpen ? (
-                  <div className="absolute bottom-full right-0 mb-2 w-32 rounded-lg border border-white/15 bg-black/95 py-1 backdrop-blur">
-                    {VOICE_OPTIONS.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => handleVoiceSwitch(v.id)}
-                        className={[
-                          "flex w-full items-center px-3 py-1.5 text-left text-xs transition-colors cursor-pointer",
-                          v.id === voice
-                            ? "text-white font-medium"
-                            : "text-white/60 hover:bg-white/10 hover:text-white/85",
-                        ].join(" ")}
-                      >
-                        {v.label}
-                        {v.id === voice ? (
-                          <span className="ml-auto text-white/40">✓</span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
 
               {/* (F) Minimize collapses the player to a draggable-looking
                   bubble so power-listeners can hide it without losing
