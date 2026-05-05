@@ -689,3 +689,28 @@ body {
     animation: none !important;
   }
 }
+
+/* ============================================================
+   READING PROGRESS BAR — sepia override
+   ------------------------------------------------------------
+   The bar lives in <ReadingProgressBar /> and ships with an
+   emerald default that matches the "Published" pill hue family
+   in dark mode. In sepia we swap the fill + glow for the rust
+   accent so it sits in the same palette as the rest of the
+   warm-mode UI.
+   ============================================================ */
+[data-theme="sepia"] .pb-reading-progress {
+  background-color: rgba(43, 34, 24, 0.08) !important;
+}
+[data-theme="sepia"] .pb-reading-progress-fill {
+  background-color: var(--pb-accent) !important;
+  box-shadow:
+    0 0 8px rgba(139, 58, 26, 0.5),
+    0 0 2px rgba(139, 58, 26, 0.85) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-reading-progress-fill {
+    transition: none !important;
+  }
+}
