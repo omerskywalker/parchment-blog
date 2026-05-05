@@ -1230,7 +1230,10 @@ export function PostAudioPlayer({
                 onClick={handleSaveOffline}
                 disabled={cacheStatus === "downloading" || cacheStatus === "cached"}
                 className={[
-                  "flex h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[10px] transition-colors",
+                  // Hidden on mobile — the Save-offline pill was crowding
+                  // the floating player against pause / scrubber / 1× /
+                  // minimize / close on iPhone widths. Desktop keeps it.
+                  "hidden h-7 shrink-0 items-center gap-1 rounded-md border px-2 text-[10px] transition-colors sm:flex",
                   cacheStatus === "cached"
                     ? "border-green-500/30 text-green-400/80"
                     : cacheStatus === "downloading"
