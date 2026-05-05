@@ -393,6 +393,24 @@ html:not([data-theme="sepia"]) body {
   color: #ededed;
 }
 
+/* ============================================================
+   LOCK HORIZONTAL SCROLL
+   ------------------------------------------------------------
+   On mobile Safari users could nudge the page sideways a few
+   pixels — some descendant (likely a long pre/code block, an
+   embedded image, or a 100vw element ignoring the scrollbar
+   gutter) was reporting a slightly wider scrollWidth than the
+   viewport. Clamp horizontal overflow at the document root and
+   pin width to 100% so nothing can produce a horizontal scroll
+   axis. Vertical scroll is untouched.
+   ============================================================ */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 /* Smooth crossfade between themes — feels like ink developing on the page */
 html {
   transition:
