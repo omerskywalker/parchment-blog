@@ -105,7 +105,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   const onboardingProgress = getOnboardingProgress(onboardingItems);
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-10 sm:py-14">
+    <main className="mx-auto max-w-[845px] px-4 py-10 sm:py-14">
       {verified ? (
         <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
           Your email is verified. Your account is fully unlocked.

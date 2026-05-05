@@ -22,7 +22,7 @@ export default async function DraftsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-8 sm:py-10">
+    <main className="mx-auto max-w-[845px] px-4 py-8 sm:py-10">
       {/* Header — Back / title / New post, mirroring the dashboard layout */}
       <header className="mb-8">
         <div className="mb-5 flex items-center justify-between gap-3">
